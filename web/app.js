@@ -94,6 +94,9 @@
     let deckDrawn = false;
     let es = null;
     let backoff = 1000;
+    let reconnectTimer = null;
+    let sseGen = 0; // bumps on every SSE render; guards stale fetch races
+    let wasJoined = false; // seen ourselves in state at least once
 
     $("#room-id").textContent = roomId;
     $("#copy-link").addEventListener("click", (e) => copyText(location.href, e.target));
@@ -165,7 +168,7 @@
       if (!voting) {
         text = "Round " + r.seq + " revealed.";
       } else if (voters === 0) {
-        text = "No voters yet. Democracy awaits.";
+        text = "No voters yet. Someone has to go first.";
       } else {
         const waiting = voters - r.votes_cast;
         text = waiting === 0
@@ -341,6 +344,7 @@
     function forgetIdentity() {
       token = null;
       pid = null;
+      wasJoined = false;
       sessionStorage.removeItem(key("token"));
       sessionStorage.removeItem(key("pid"));
       showJoin();
@@ -357,7 +361,10 @@
       e.preventDefault();
       const name = $("#name").value.trim();
       const kind = $("#kind").value;
-      if (!name) return;
+      if (!name) {
+        toast("A name would help.");
+        return;
+      }
       try {
         const resp = await api("POST", base + "/participants", { name, kind });
         token = resp.token;
@@ -366,10 +373,15 @@
         sessionStorage.setItem(key("pid"), pid);
         localStorage.setItem("pv:name", name);
         $("#join-dialog").close();
-        // The joined event will arrive via SSE, but render immediately for
-        // snappiness on slow connections.
-        state = await api("GET", base);
-        render();
+        // The joined event will arrive via SSE, but fetch immediately for
+        // snappiness on slow connections — unless an SSE render beat us to
+        // it, in which case the fetch is the staler of the two.
+        const gen = sseGen;
+        const fetched = await api("GET", base);
+        if (gen === sseGen) {
+          state = fetched;
+          render();
+        }
       } catch (err) {
         toast(err.status === 404
           ? "This room has expired. Rooms evaporate after two hours of quiet."
@@ -389,10 +401,15 @@
     function connect() {
       es = new EventSource(base + "/events");
       const onEvent = (e) => {
+        sseGen++;
         state = JSON.parse(e.data);
-        if (!me() && token) {
-          // Our participant vanished (room recycled after expiry): the
-          // token is dead, rejoin honestly.
+        if (me()) {
+          wasJoined = true;
+        } else if (token && wasJoined) {
+          // We were in this room and now we're not (room recycled after
+          // expiry): the token is dead, rejoin honestly. The wasJoined
+          // guard stops a stale pre-join snapshot from wiping a fresh
+          // identity.
           forgetIdentity();
         }
         render();
@@ -407,9 +424,24 @@
       es.onerror = () => {
         es.close();
         setLive(false);
+        if (reconnectTimer) return; // one pending reconnect, ever
         const delay = backoff * (0.5 + Math.random());
         backoff = Math.min(backoff * 2, 30000);
-        setTimeout(connect, delay);
+        reconnectTimer = setTimeout(async () => {
+          reconnectTimer = null;
+          try {
+            await api("GET", base);
+          } catch (err) {
+            if (err.status === 404) {
+              // The room evaporated. Stop knocking.
+              $("#room-main").hidden = true;
+              $("#room-missing").hidden = false;
+              return;
+            }
+            // Transient failure: reconnect anyway and let backoff grow.
+          }
+          connect();
+        }, delay);
       };
     }
 

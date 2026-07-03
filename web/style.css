@@ -273,9 +273,11 @@ input::placeholder { color: var(--ink-dim); }
 .room-meta { display: flex; align-items: center; gap: 0.6rem; font-family: var(--mono); font-size: 0.85rem; }
 .room-meta code { color: var(--ink-dim); }
 
+/* connection dot stays inside the one-accent palette: amber = live,
+   dim = reconnecting */
 .live { color: var(--ink-dim); font-size: 0.6rem; transition: color 0.3s; }
-.live.on { color: #3a9d5d; }
-.live.off { color: #c0392b; }
+.live.on { color: var(--accent); }
+.live.off { color: var(--ink-dim); }
 
 .round-no { font-size: 0.8rem; color: var(--accent); margin: 0 0 0.2rem; letter-spacing: 0.08em; }
 .round-head h1 { font-size: clamp(1.3rem, 4vw, 1.9rem); margin: 0 0 0.4rem; }

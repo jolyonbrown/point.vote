@@ -15,21 +15,28 @@ func mountStatic(mux *http.ServeMux) {
 		pattern     string
 		file        string
 		contentType string
+		cache       bool
 	}{
-		{"GET /{$}", "index.html", "text/html; charset=utf-8"},
-		{"GET /r/{id}", "room.html", "text/html; charset=utf-8"},
-		{"GET /app.js", "app.js", "text/javascript; charset=utf-8"},
-		{"GET /style.css", "style.css", "text/css; charset=utf-8"},
-		{"GET /llms.txt", "llms.txt", "text/plain; charset=utf-8"},
+		{"GET /{$}", "index.html", "text/html; charset=utf-8", false},
+		{"GET /r/{id}", "room.html", "text/html; charset=utf-8", false},
+		{"GET /app.js", "app.js", "text/javascript; charset=utf-8", true},
+		{"GET /style.css", "style.css", "text/css; charset=utf-8", true},
+		{"GET /llms.txt", "llms.txt", "text/plain; charset=utf-8", false},
 	}
 	for _, rt := range routes {
 		body, err := web.Files.ReadFile(rt.file)
 		if err != nil {
 			panic(fmt.Sprintf("embedded file %s: %v", rt.file, err))
 		}
-		contentType := rt.contentType
+		contentType, cache := rt.contentType, rt.cache
 		mux.HandleFunc(rt.pattern, func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", contentType)
+			if cache {
+				// Assets are tiny but the origin is a Pi behind Cloudflare;
+				// give the edge something to hold onto. HTML stays
+				// uncached so deploys show up promptly.
+				w.Header().Set("Cache-Control", "public, max-age=300")
+			}
 			w.Write(body)
 		})
 	}
