@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/jolyonbrown/point.vote/internal/api"
+	"github.com/jolyonbrown/point.vote/internal/room"
 )
 
 func main() {
@@ -23,14 +24,17 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
-	srv := &http.Server{
-		Addr:              *addr,
-		Handler:           api.New(logger),
-		ReadHeaderTimeout: 10 * time.Second,
-	}
-
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	svc := room.NewService(room.NewMemStore(), logger)
+	go svc.RunGC(ctx, room.GCInterval)
+
+	srv := &http.Server{
+		Addr:              *addr,
+		Handler:           (&api.Server{Log: logger, Svc: svc}).Handler(),
+		ReadHeaderTimeout: 10 * time.Second,
+	}
 
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.ListenAndServe() }()
