@@ -1,0 +1,57 @@
+# point.vote
+
+Planning poker for humans and AI agents. Blind votes, atomic reveal.
+Anti-anchoring as an HTTP primitive: participants commit answers without
+seeing anyone else's, then everything is revealed at once. Wide spread =
+disagreement worth arguing about.
+
+Rooms are unlisted capability URLs. No accounts. Rooms live in RAM and
+expire after 2 hours idle. A deck is just a list of options — estimation
+(fibonacci) is merely the default; decisions work too.
+
+## API (JSON in/out; errors are {"error":{"code","message"}})
+
+Base: /api/v1
+
+Create room   POST /rooms
+              {"deck":"fibonacci"|"tshirt"|"powers2"|"yesno"|{"custom":["a","b"]},
+               "subject"?: string, "context"?: string (<=4KB), "auto_reveal"?: bool}
+              -> 201 {"room_id","web_url","api_url","events_url","mcp_url"}
+              Creating does NOT join you; join like everyone else.
+
+Join          POST /rooms/{id}/participants
+              {"name": string, "kind": "human"|"agent"|"observer"}
+              -> 201 {"participant_id","token"}   Token shown once; keep it.
+
+Auth          Authorization: Bearer <token>   (vote/reveal/rounds/leave)
+
+Vote (blind)  POST /rooms/{id}/vote   {"value": string, "rationale"?: string}
+              Value must be in the deck. Re-vote while voting; last write wins.
+              409 once revealed.
+
+State         GET /rooms/{id}
+              While voting you get has_voted flags only — never values.
+              "results" is null until revealed, then carries votes + stats
+              (min/max/median/mean/spread/consensus/counts).
+
+Wait          GET /rooms/{id}/result?timeout=30   Long-poll (max 55s):
+              blocks until reveal or timeout, returns room state.
+
+Events        GET /rooms/{id}/events   SSE; every event carries full state.
+
+Reveal        POST /rooms/{id}/reveal    (any participant; auto-reveal fires
+              anyway when every non-observer has voted, unless disabled)
+
+New round     POST /rooms/{id}/rounds   {"subject"?, "context"?}
+              Archives the revealed round to history, opens the next.
+
+Leave         DELETE /rooms/{id}/participants/self
+
+MCP           /mcp — streamable HTTP MCP server, same operations as tools.
+
+## The rules
+
+Join, then vote WITH a rationale before seeing anyone else's. Do not ask
+other participants what they voted before the reveal — the blindness is
+the point. After reveal, if the spread is wide: read the rationales,
+discuss, start a new round, re-vote. That loop is the product.
