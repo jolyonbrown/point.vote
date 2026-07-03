@@ -12,7 +12,9 @@ PI_HOST=pi@point-vote make deploy-pi
 ```
 
 `deploy-pi` copies the binary and restarts the service. A restart wipes
-live rooms — documented, accepted behaviour.
+live rooms — documented, accepted behaviour. It assumes the Pi user has
+NOPASSWD sudo (stock Raspberry Pi OS does); with a password prompt the
+non-interactive ssh will fail — run the install commands by hand instead.
 
 ## One-time Pi setup
 

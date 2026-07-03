@@ -26,19 +26,27 @@ have() { command -v "$1" >/dev/null 2>&1; }
 have curl && have jq || fail "curl and jq are required"
 
 # ---------------------------------------------------------------- server --
-say "building and starting a local point.vote"
-command -v go >/dev/null || fail "go toolchain required (or set POINTVOTE_URL)"
-go build -o bin/pointvote ./cmd/pointvote
-./bin/pointvote -addr "127.0.0.1:$PORT" >/tmp/pointvote-demo.log 2>&1 &
-SERVER_PID=$!
+SERVER_PID=""
 CHILD_PIDS=()
 cleanup() {
-  kill "$SERVER_PID" 2>/dev/null || true
+  [ -n "$SERVER_PID" ] && kill "$SERVER_PID" 2>/dev/null || true
   for pid in "${CHILD_PIDS[@]:-}"; do kill "$pid" 2>/dev/null || true; done
 }
 trap cleanup EXIT
-for _ in $(seq 1 50); do curl -sf "$BASE/healthz" >/dev/null && break; sleep 0.1; done
-curl -sf "$BASE/healthz" >/dev/null || fail "server did not come up (see /tmp/pointvote-demo.log)"
+
+if [ -n "${POINTVOTE_URL:-}" ]; then
+  BASE=${POINTVOTE_URL%/}
+  API="$BASE/api/v1"
+  say "using existing server at $BASE"
+else
+  say "building and starting a local point.vote"
+  command -v go >/dev/null || fail "go toolchain required (or point POINTVOTE_URL at a running server)"
+  go build -o bin/pointvote ./cmd/pointvote
+  ./bin/pointvote -addr "127.0.0.1:$PORT" >/tmp/pointvote-demo.log 2>&1 &
+  SERVER_PID=$!
+  for _ in $(seq 1 50); do curl -sf "$BASE/healthz" >/dev/null && break; sleep 0.1; done
+fi
+curl -sf "$BASE/healthz" >/dev/null || fail "no server at $BASE (see /tmp/pointvote-demo.log)"
 
 # ---------------------------------------------------------------- ticket --
 SUBJECT="Estimate: per-participant vote timestamps in revealed results"
@@ -68,6 +76,7 @@ DIRECTOR=$(curl -s -X POST "$API/rooms/$ROOM/participants" \
 # --------------------------------------------------------------- casting --
 if [ -n "${DEMO_AGENTS:-}" ]; then
   read -r -a AGENTS <<<"$DEMO_AGENTS"
+  [ "${#AGENTS[@]}" -eq 2 ] || fail "DEMO_AGENTS needs exactly two entries, e.g. \"claude bot\""
 elif have claude && have codex; then
   AGENTS=(claude codex)
 elif have claude; then
@@ -159,18 +168,22 @@ wait_for_reveal() {
 }
 
 print_round() { # $1 round json (full state), $2 label
+  echo "$1" | jq -e '.results != null' >/dev/null \
+    || fail "round never revealed — the server may have gone away"
   bold "$2"
   echo "$1" | jq -r '.results.votes[] | "  \(.name) voted \(.value)\n    “\(.rationale)”"'
   echo "$1" | jq -r '.results.stats |
     "  stats: spread \(.spread // "—") · median \(.median // "—") · mean \(.mean // "—") · consensus \(.consensus)"'
 }
 
-# deck-step distance between the min and max numeric votes
+# deck-step distance between the lowest and highest NUMERIC votes —
+# jokers ("?", "☕") don't count toward the spread, matching the stats.
 spread_steps() { # $1 state json
   echo "$1" | jq -r '
     .deck as $deck |
-    [.results.votes[].value | select(. as $v | $deck | index($v) != null)
-      | . as $v | ($deck | index($v))] |
+    [.results.votes[].value
+      | select(test("^-?[0-9]+([.][0-9]+)?$"))
+      | . as $v | ($deck | index($v)) | select(. != null)] |
     if length == 0 then 0 else (max - min) end'
 }
 

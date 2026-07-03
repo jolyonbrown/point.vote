@@ -353,8 +353,10 @@ paths:
         - { name: id, in: path, required: true, schema: { type: string } }
         - name: timeout
           in: query
-          schema: { type: integer, minimum: 0, maximum: 55, default: 30 }
-          description: seconds; capped at 55; 0 returns current state immediately
+          schema: { type: integer, minimum: 0, default: 30 }
+          description: >
+            seconds; values above 55 are clamped to 55, not rejected;
+            0 returns current state immediately
       responses:
         "200":
           description: Room state (revealed, or as-is on timeout)

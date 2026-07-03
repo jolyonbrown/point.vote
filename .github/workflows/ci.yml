@@ -34,6 +34,10 @@ jobs:
         with:
           go-version-file: go.mod
       - run: make release
-      - run: gh release create "$GITHUB_REF_NAME" --generate-notes dist/pointvote-linux-arm64
+      # Idempotent for re-pushed tags: create if absent, then (re)attach.
+      - run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --generate-notes
+          gh release upload "$GITHUB_REF_NAME" dist/pointvote-linux-arm64 --clobber
         env:
           GH_TOKEN: ${{ github.token }}

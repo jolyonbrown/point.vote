@@ -101,7 +101,8 @@ hours of quiet. No accounts, no database, no cookies. Restarting the server
 wipes every room; this is documented, accepted behaviour, not an apology.
 
 **Non-goals (v1):** accounts, persistence, Jira/Linear import, editing
-votes after reveal, horizontal scaling, payments, chat. Rooms evaporate.
+votes after reveal, horizontal scaling, payments, chat/video. Rooms
+evaporate.
 
 ## Running it
 

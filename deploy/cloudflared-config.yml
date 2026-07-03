@@ -14,5 +14,7 @@ credentials-file: /etc/cloudflared/pointvote.json
 
 ingress:
   - hostname: point.vote
-    service: http://localhost:8080
+    # 127.0.0.1 explicitly: the app binds IPv4 loopback only, and
+    # localhost may resolve ::1 first.
+    service: http://127.0.0.1:8080
   - service: http_status:404
