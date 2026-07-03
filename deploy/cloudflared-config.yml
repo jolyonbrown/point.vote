@@ -1,0 +1,20 @@
+# cloudflared config for the point.vote tunnel (PLAN.md §9 phase 4).
+# Lives at /etc/cloudflared/config.yml on the Pi; cloudflared runs as its
+# own systemd service (cloudflared service install). TLS terminates at the
+# Cloudflare edge; no ports opened, home IP unexposed, works behind CGNAT.
+#
+# Setup (once):
+#   cloudflared tunnel login
+#   cloudflared tunnel create pointvote
+#   cloudflared tunnel route dns pointvote point.vote
+#   sudo cloudflared --config /etc/cloudflared/config.yml service install
+
+tunnel: pointvote
+credentials-file: /etc/cloudflared/pointvote.json
+
+ingress:
+  - hostname: point.vote
+    # 127.0.0.1 explicitly: the app binds IPv4 loopback only, and
+    # localhost may resolve ::1 first.
+    service: http://127.0.0.1:8080
+  - service: http_status:404

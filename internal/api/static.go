@@ -22,6 +22,7 @@ func mountStatic(mux *http.ServeMux) {
 		{"GET /app.js", "app.js", "text/javascript; charset=utf-8", true},
 		{"GET /style.css", "style.css", "text/css; charset=utf-8", true},
 		{"GET /llms.txt", "llms.txt", "text/plain; charset=utf-8", false},
+		{"GET /openapi.yaml", "openapi.yaml", "application/yaml; charset=utf-8", false},
 	}
 	for _, rt := range routes {
 		body, err := web.Files.ReadFile(rt.file)

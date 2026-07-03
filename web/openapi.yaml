@@ -1,0 +1,398 @@
+openapi: 3.1.0
+info:
+  title: point.vote
+  version: "1.0"
+  description: |
+    Planning poker for humans and agents. Blind votes, atomic reveal.
+
+    The one rule: while a round is in the `voting` state, vote values and
+    rationales are unobtainable through every read path — state, SSE,
+    long-poll, logs. `results` is null until reveal.
+
+    Rooms are unlisted capability URLs held in RAM; they expire after two
+    hours idle. No accounts. Same API for curl, browsers, and agents; the
+    MCP mirror lives at /mcp.
+servers:
+  - url: https://point.vote
+components:
+  securitySchemes:
+    participantToken:
+      type: http
+      scheme: bearer
+      description: Token returned once by join; only its SHA-256 is stored.
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum: [validation, bad_token, not_found, wrong_state,
+                     room_full, forbidden, server_full, rate_limited,
+                     too_large, internal]
+            message:
+              type: string
+    State:
+      type: object
+      required: [room_id, deck, auto_reveal, round, results, history]
+      properties:
+        room_id: { type: string, examples: [mint-otter-42] }
+        deck:
+          type: array
+          items: { type: string }
+        auto_reveal: { type: boolean }
+        round: { $ref: "#/components/schemas/RoundState" }
+        results:
+          oneOf:
+            - $ref: "#/components/schemas/Results"
+            - type: "null"
+          description: null until the round is revealed
+        history:
+          type: array
+          maxItems: 20
+          items: { $ref: "#/components/schemas/RoundSummary" }
+    RoundState:
+      type: object
+      required: [seq, subject, context, state, votes_cast, participants]
+      properties:
+        seq: { type: integer, minimum: 1 }
+        subject: { type: string, maxLength: 200 }
+        context: { type: string, description: "≤ 4KB" }
+        state: { type: string, enum: [voting, revealed] }
+        votes_cast: { type: integer }
+        participants:
+          type: array
+          items: { $ref: "#/components/schemas/ParticipantState" }
+    ParticipantState:
+      type: object
+      required: [id, name, kind, has_voted]
+      properties:
+        id: { type: string }
+        name: { type: string, maxLength: 40 }
+        kind: { type: string, enum: [human, agent, observer] }
+        has_voted: { type: boolean }
+    Results:
+      type: object
+      required: [votes, stats]
+      properties:
+        votes:
+          type: array
+          items: { $ref: "#/components/schemas/RevealedVote" }
+        stats: { $ref: "#/components/schemas/Stats" }
+    RevealedVote:
+      type: object
+      required: [name, kind, value, rationale]
+      properties:
+        name: { type: string }
+        kind: { type: string, enum: [human, agent, observer] }
+        value: { type: string }
+        rationale: { type: string, maxLength: 500 }
+    Stats:
+      type: object
+      description: >
+        Numeric fields are null when no vote parses as a finite number.
+        Non-numeric votes ("?", "☕") are counted but excluded from the
+        maths. Consensus means at least one numeric vote and all numeric
+        votes equal.
+      required: [min, max, median, mean, spread, consensus, counts]
+      properties:
+        min: { type: [number, "null"] }
+        max: { type: [number, "null"] }
+        median: { type: [number, "null"] }
+        mean: { type: [number, "null"] }
+        spread: { type: [number, "null"] }
+        consensus: { type: boolean }
+        counts:
+          type: object
+          additionalProperties: { type: integer }
+    RoundSummary:
+      type: object
+      required: [seq, subject, votes, stats]
+      properties:
+        seq: { type: integer }
+        subject: { type: string }
+        votes:
+          type: array
+          items: { $ref: "#/components/schemas/RevealedVote" }
+        stats: { $ref: "#/components/schemas/Stats" }
+  responses:
+    NotFound:
+      description: No such room
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    BadToken:
+      description: Invalid or missing bearer token
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Validation:
+      description: Invalid request
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+paths:
+  /api/v1/rooms:
+    post:
+      summary: Create a room
+      description: >
+        Creating does not join you; the creator joins like everyone else.
+        Bodies are decoded as JSON regardless of Content-Type (curl -d
+        works), capped at 16KB. Rate limit: 30 rooms/hour per IP.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deck:
+                  description: preset name or {"custom":[...]} (2–26 options, ≤24 chars each); default fibonacci
+                  oneOf:
+                    - type: string
+                      enum: [fibonacci, tshirt, powers2, yesno]
+                    - type: object
+                      required: [custom]
+                      properties:
+                        custom:
+                          type: array
+                          minItems: 2
+                          maxItems: 26
+                          items: { type: string, maxLength: 24 }
+                subject: { type: string, maxLength: 200 }
+                context: { type: string, description: "≤ 4KB" }
+                auto_reveal: { type: boolean, default: true }
+      responses:
+        "201":
+          description: Room created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [room_id, web_url, api_url, events_url, mcp_url]
+                properties:
+                  room_id: { type: string }
+                  web_url: { type: string }
+                  api_url: { type: string }
+                  events_url: { type: string }
+                  mcp_url: { type: string }
+        "400": { $ref: "#/components/responses/Validation" }
+        "413":
+          description: Body exceeds 16KB
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429":
+          description: Per-IP creation limit reached
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "503":
+          description: Server at its 10k-room cap
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /api/v1/rooms/{id}:
+    get:
+      summary: Room state (redacted while voting)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Full state; results null until revealed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/State" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/rooms/{id}/participants:
+    post:
+      summary: Join a room
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, kind]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 40 }
+                kind: { type: string, enum: [human, agent, observer] }
+      responses:
+        "201":
+          description: Joined; the token is shown exactly once
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [participant_id, token]
+                properties:
+                  participant_id: { type: string }
+                  token: { type: string }
+        "400": { $ref: "#/components/responses/Validation" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Room is at its 100-participant cap (code room_full)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /api/v1/rooms/{id}/vote:
+    post:
+      summary: Cast or change a blind vote
+      description: Re-voting while the round is voting is allowed; last write wins.
+      security: [{ participantToken: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [value]
+              properties:
+                value: { type: string, description: must be a member of the room's deck }
+                rationale: { type: string, maxLength: 500 }
+      responses:
+        "200":
+          description: Vote recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accepted]
+                properties:
+                  accepted: { type: boolean, const: true }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/BadToken" }
+        "403":
+          description: Observers cannot vote (code forbidden)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Round already revealed (code wrong_state)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /api/v1/rooms/{id}/reveal:
+    post:
+      summary: Reveal the current round
+      description: Any participant may reveal early. 409 if already revealed.
+      security: [{ participantToken: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Revealed state with results
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/State" }
+        "401": { $ref: "#/components/responses/BadToken" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Already revealed (code wrong_state)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /api/v1/rooms/{id}/rounds:
+    post:
+      summary: Archive the revealed round and start the next
+      description: >
+        Requires the current round to be revealed — archiving a voting
+        round would copy blind votes into history. 409 otherwise.
+      security: [{ participantToken: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subject: { type: string, maxLength: 200 }
+                context: { type: string, description: "≤ 4KB" }
+      responses:
+        "201":
+          description: New round open for voting
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/State" }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/BadToken" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Current round still voting (code wrong_state)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /api/v1/rooms/{id}/participants/self:
+    delete:
+      summary: Leave the room
+      description: Removes you and, while voting, your current-round vote.
+      security: [{ participantToken: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "204": { description: Left }
+        "401": { $ref: "#/components/responses/BadToken" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/rooms/{id}/result:
+    get:
+      summary: Long-poll for the reveal
+      description: >
+        Blocks until the current round is revealed or the timeout elapses,
+        then returns room state either way. Lets curl-only agents wait
+        without parsing SSE.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - name: timeout
+          in: query
+          schema: { type: integer, minimum: 0, default: 30 }
+          description: >
+            seconds; values above 55 are clamped to 55, not rejected;
+            0 returns current state immediately
+      responses:
+        "200":
+          description: Room state (revealed, or as-is on timeout)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/State" }
+        "400": { $ref: "#/components/responses/Validation" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/rooms/{id}/events:
+    get:
+      summary: Server-sent events stream
+      description: >
+        Named events: state (initial snapshot, also sent on reconnect),
+        joined, left, voted, revealed, round_started. Every event's data
+        payload is the full redacted room state — snapshots, not diffs.
+        Heartbeat comment every 25s.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: text/event-stream of full-state snapshots
+          content:
+            text/event-stream:
+              schema: { type: string }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /healthz:
+    get:
+      summary: Liveness and room count
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, rooms]
+                properties:
+                  ok: { type: boolean }
+                  rooms: { type: integer }

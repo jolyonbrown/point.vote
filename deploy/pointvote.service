@@ -1,0 +1,29 @@
+# point.vote systemd unit for the Raspberry Pi (PLAN.md §9 phase 4).
+# Install: sudo cp deploy/pointvote.service /etc/systemd/system/
+#          sudo systemctl enable --now pointvote
+#
+# The app binds 127.0.0.1:8080 only; the Cloudflare Tunnel is the sole
+# ingress. A restart wipes live rooms — documented, accepted behaviour.
+
+[Unit]
+Description=point.vote — planning poker for humans and agents
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/pointvote
+DynamicUser=yes
+Restart=always
+RestartSec=2
+
+# The app writes nothing; lock it down accordingly.
+MemoryMax=256M
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target
