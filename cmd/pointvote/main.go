@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/jolyonbrown/point.vote/internal/api"
+	"github.com/jolyonbrown/point.vote/internal/mcp"
 	"github.com/jolyonbrown/point.vote/internal/room"
 )
 
@@ -32,7 +33,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:              *addr,
-		Handler:           (&api.Server{Log: logger, Svc: svc}).Handler(),
+		Handler:           (&api.Server{Log: logger, Svc: svc, MCP: mcp.Handler(svc, logger)}).Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

@@ -75,9 +75,9 @@ func writeSSE(w io.Writer, name string, id int, st room.State) {
 
 // handleResult is the long-poll: it blocks until the current round is
 // revealed or the timeout elapses, then returns room state either way. It
-// lets curl-only agents wait without parsing SSE.
+// lets curl-only agents wait without parsing SSE. The waiting itself lives
+// in room.Service, shared with the MCP wait_for_reveal tool.
 func (s *Server) handleResult(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
 	timeout := 30 * time.Second
 	if q := r.URL.Query().Get("timeout"); q != "" {
 		secs, err := strconv.Atoi(q)
@@ -88,64 +88,13 @@ func (s *Server) handleResult(w http.ResponseWriter, r *http.Request) {
 		timeout = time.Duration(min(secs, maxLongPollSeconds)) * time.Second
 	}
 
-	// Subscribe before the first state check so a reveal can't slip between
-	// the two.
-	ch, cancel, err := s.Svc.Subscribe(id)
+	st, err := s.Svc.WaitForReveal(r.Context(), r.PathValue("id"), timeout)
 	if err != nil {
-		writeError(w, err)
-		return
-	}
-	defer cancel()
-
-	st, err := s.Svc.State(id)
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	if st.Round.State == room.StateRevealed || timeout == 0 {
-		writeJSON(w, http.StatusOK, st)
-		return
-	}
-
-	timer := time.NewTimer(timeout)
-	defer timer.Stop()
-	// Subscriber channels drop events rather than block (slow-consumer
-	// rule), so a reveal could in principle be missed under a stampede;
-	// the recheck ticker bounds that wait to two seconds.
-	recheck := time.NewTicker(2 * time.Second)
-	defer recheck.Stop()
-
-	for {
-		select {
-		case <-r.Context().Done():
-			return
-		case <-timer.C:
-			st, err := s.Svc.State(id)
-			if err != nil {
-				writeError(w, err)
-				return
-			}
-			writeJSON(w, http.StatusOK, st)
-			return
-		case <-recheck.C:
-			st, err := s.Svc.State(id)
-			if err != nil {
-				writeError(w, err)
-				return
-			}
-			if st.Round.State == room.StateRevealed {
-				writeJSON(w, http.StatusOK, st)
-				return
-			}
-		case ev, open := <-ch:
-			if !open {
-				writeError(w, room.ErrRoomNotFound)
-				return
-			}
-			if ev.State.Round.State == room.StateRevealed {
-				writeJSON(w, http.StatusOK, ev.State)
-				return
-			}
+		if r.Context().Err() != nil {
+			return // client went away; nothing to write
 		}
+		writeError(w, err)
+		return
 	}
+	writeJSON(w, http.StatusOK, st)
 }
