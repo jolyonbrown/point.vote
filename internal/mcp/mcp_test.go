@@ -66,6 +66,30 @@ func resultText(res *sdk.CallToolResult) string {
 	return b.String()
 }
 
+// TestBodyCap pins the 16KB request-body limit on /mcp: oversized bodies
+// must be rejected at the HTTP boundary, not parsed.
+func TestBodyCap(t *testing.T) {
+	svc := room.NewService(room.NewMemStore(), slog.New(slog.DiscardHandler))
+	mux := http.NewServeMux()
+	mux.Handle("/mcp", Handler(svc, slog.New(slog.DiscardHandler)))
+	ts := httptest.NewServer(mux)
+	t.Cleanup(ts.Close)
+
+	big := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"pad":"` +
+		strings.Repeat("x", 20<<10) + `"}}`
+	req, _ := http.NewRequest("POST", ts.URL+"/mcp", strings.NewReader(big))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json, text/event-stream")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 400 || resp.StatusCode >= 500 {
+		t.Fatalf("oversized /mcp body = %d, want 4xx", resp.StatusCode)
+	}
+}
+
 func TestInstructionsAndToolList(t *testing.T) {
 	cs := session(t)
 
@@ -172,23 +196,38 @@ func TestFullLoop(t *testing.T) {
 }
 
 func TestManualRevealAndWaitTimeout(t *testing.T) {
+	const canary = "WAIT-TIMEOUT-CANARY"
 	cs := session(t)
 
 	var created createRoomResult
 	call(t, cs, "create_room", map[string]any{"auto_reveal": false}, &created)
 	var p joinRoomResult
 	call(t, cs, "join_room", map[string]any{"room_id": created.RoomID, "name": "solo"}, &p)
-	call(t, cs, "cast_vote", map[string]any{"room_id": created.RoomID, "token": p.Token, "value": "5"}, nil)
+	call(t, cs, "cast_vote", map[string]any{"room_id": created.RoomID, "token": p.Token, "value": "5", "rationale": canary}, nil)
 
-	// auto_reveal off: wait_for_reveal times out, returning the voting state.
+	// timeout_s 0 returns the current (voting) state immediately, like REST.
 	start := time.Now()
 	var st room.State
-	call(t, cs, "wait_for_reveal", map[string]any{"room_id": created.RoomID, "timeout_s": 1}, &st)
+	call(t, cs, "wait_for_reveal", map[string]any{"room_id": created.RoomID, "timeout_s": 0}, &st)
+	if elapsed := time.Since(start); elapsed > 2*time.Second {
+		t.Fatalf("timeout_s 0 took %v, want immediate", elapsed)
+	}
+	if st.Round.State != room.StateVoting {
+		t.Fatalf("state = %s, want voting", st.Round.State)
+	}
+
+	// auto_reveal off: wait_for_reveal times out, returning the voting
+	// state — which must be redacted on this path too.
+	start = time.Now()
+	res := call(t, cs, "wait_for_reveal", map[string]any{"room_id": created.RoomID, "timeout_s": 1}, &st)
 	if elapsed := time.Since(start); elapsed < 900*time.Millisecond {
 		t.Fatalf("wait_for_reveal returned in %v, should have blocked ~1s", elapsed)
 	}
 	if st.Round.State != room.StateVoting {
 		t.Fatalf("state = %s, want voting", st.Round.State)
+	}
+	if raw, _ := json.Marshal(res); strings.Contains(string(raw), canary) {
+		t.Fatalf("wait_for_reveal timeout path leaked rationale while voting: %s", raw)
 	}
 
 	var revealed room.State

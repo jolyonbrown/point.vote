@@ -17,15 +17,24 @@ import (
 // instructions teach connected agents the anti-anchoring loop (PLAN.md §5).
 const instructions = `Join the room, cast your vote WITH a rationale before seeing anyone else's, then wait_for_reveal. If the spread is wide, read the other rationales, discuss, and re-vote in a new round. Do not ask other participants what they voted before revealing — the blindness is the point.`
 
+// maxBodyBytes caps /mcp request bodies before the SDK parses them,
+// mirroring the REST surface's 16KB limit. A tool call is a JSON-RPC
+// envelope around args whose largest legal field is a 4KB context.
+const maxBodyBytes = 16 << 10
+
 // Handler returns the streamable-HTTP MCP endpoint. It runs stateless: no
 // session bookkeeping, every call self-contained — ephemeral by default,
 // like the rest of the product.
 func Handler(svc *room.Service, log *slog.Logger) http.Handler {
-	return sdk.NewStreamableHTTPHandler(func(r *http.Request) *sdk.Server {
+	inner := sdk.NewStreamableHTTPHandler(func(r *http.Request) *sdk.Server {
 		// A server per request is cheap (seven AddTool calls) and lets
 		// create_room mint web URLs for the origin the caller actually used.
 		return newServer(svc, originFrom(r), log)
 	}, &sdk.StreamableHTTPOptions{Stateless: true})
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
+		inner.ServeHTTP(w, r)
+	})
 }
 
 func originFrom(r *http.Request) string {
@@ -89,7 +98,7 @@ type startRoundArgs struct {
 
 type waitForRevealArgs struct {
 	RoomID   string `json:"room_id"`
-	TimeoutS int    `json:"timeout_s,omitempty" jsonschema:"seconds to wait, default 30, max 55"`
+	TimeoutS *int   `json:"timeout_s,omitempty" jsonschema:"seconds to wait: default 30, max 55, 0 returns current state immediately"`
 }
 
 func newServer(svc *room.Service, origin string, log *slog.Logger) *sdk.Server {
@@ -188,9 +197,16 @@ func newServer(svc *room.Service, origin string, log *slog.Logger) *sdk.Server {
 		Description: "Block until the current round is revealed or the timeout passes, then return room state. Cast your vote first.",
 	}, func(ctx context.Context, req *sdk.CallToolRequest, a waitForRevealArgs) (*sdk.CallToolResult, any, error) {
 		timeout := 30
-		if a.TimeoutS > 0 {
-			timeout = min(a.TimeoutS, 55)
+		if a.TimeoutS != nil {
+			if *a.TimeoutS < 0 {
+				return nil, nil, room.ValidationError("timeout_s must be non-negative")
+			}
+			timeout = min(*a.TimeoutS, 55) // 0 = return current state now, like REST
 		}
+		// In stateless streamable HTTP the SDK strips request-context
+		// cancellation from tool handlers, so a client that disconnects
+		// mid-wait does not abort this call; the 55s cap bounds the
+		// stranded goroutine instead. (REST long-polls do abort.)
 		st, err := svc.WaitForReveal(ctx, a.RoomID, time.Duration(timeout)*time.Second)
 		if err != nil {
 			return nil, nil, err
