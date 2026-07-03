@@ -1,11 +1,29 @@
 package api
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 )
+
+// logExtra carries request-scoped log fields that only the handler can
+// know, back to the request logger (PLAN.md §7: participant_kind "where
+// known"). Same-goroutine access only; no locking.
+type logExtra struct {
+	participantKind string
+}
+
+type logExtraKey struct{}
+
+// setParticipantKind annotates the request log line for r, when the
+// handler learns who is calling.
+func setParticipantKind(r *http.Request, kind string) {
+	if ex, ok := r.Context().Value(logExtraKey{}).(*logExtra); ok {
+		ex.participantKind = kind
+	}
+}
 
 // requestLogger emits one structured log line per request (PLAN.md §7).
 // Never log vote values here — while voting they must not appear anywhere,
@@ -13,6 +31,8 @@ import (
 func requestLogger(logger *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
+		ex := &logExtra{}
+		r = r.WithContext(context.WithValue(r.Context(), logExtraKey{}, ex))
 		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(rec, r)
 		attrs := []any{
@@ -23,6 +43,9 @@ func requestLogger(logger *slog.Logger, next http.Handler) http.Handler {
 		}
 		if id := roomIDFromPath(r.URL.Path); id != "" {
 			attrs = append(attrs, "room_id", id)
+		}
+		if ex.participantKind != "" {
+			attrs = append(attrs, "participant_kind", ex.participantKind)
 		}
 		logger.Info("request", attrs...)
 	})

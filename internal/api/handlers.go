@@ -16,9 +16,16 @@ import (
 // a header.
 func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 	body := http.MaxBytesReader(w, r.Body, maxBodyBytes)
-	err := json.NewDecoder(body).Decode(dst)
+	dec := json.NewDecoder(body)
+	err := dec.Decode(dst)
 	switch {
 	case err == nil:
+		// One JSON value per body: trailing data is rejected rather than
+		// silently ignored, so the body limit can't be dodged by a small
+		// valid prefix.
+		if dec.More() {
+			return room.ValidationError("unexpected data after JSON body")
+		}
 		return nil
 	case errors.Is(err, io.EOF):
 		return nil // empty body
@@ -123,6 +130,7 @@ func (s *Server) handleJoin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
+	setParticipantKind(r, req.Kind)
 	writeJSON(w, http.StatusCreated, map[string]string{"participant_id": pid, "token": token})
 }
 
@@ -144,10 +152,12 @@ func (s *Server) handleVote(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
-	if err := s.Svc.CastVote(r.PathValue("id"), bearerToken(r), req.Value, req.Rationale); err != nil {
+	kind, err := s.Svc.CastVote(r.PathValue("id"), bearerToken(r), req.Value, req.Rationale)
+	if err != nil {
 		writeError(w, err)
 		return
 	}
+	setParticipantKind(r, kind)
 	writeJSON(w, http.StatusOK, map[string]bool{"accepted": true})
 }
 

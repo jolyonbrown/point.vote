@@ -81,21 +81,21 @@ func (s *Service) Join(roomID, name, kind string) (pid, token string, err error)
 	return pid, token, nil
 }
 
-// CastVote records a blind vote.
-func (s *Service) CastVote(roomID, token, value, rationale string) error {
+// CastVote records a blind vote and reports the voter's kind.
+func (s *Service) CastVote(roomID, token, value, rationale string) (kind string, err error) {
 	r, err := s.room(roomID)
 	if err != nil {
-		return err
+		return "", err
 	}
 	kind, revealed, err := r.CastVote(token, value, rationale, s.now())
 	if err != nil {
-		return err
+		return "", err
 	}
 	s.log.Info("vote_cast", "room_id", roomID, "kind", kind)
 	if revealed != nil {
 		s.logRevealed(roomID, revealed)
 	}
-	return nil
+	return kind, nil
 }
 
 // Reveal flips the current round to revealed.

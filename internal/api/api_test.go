@@ -530,6 +530,89 @@ func TestRateLimit(t *testing.T) {
 	}
 }
 
+func TestTrailingBodyDataRejected(t *testing.T) {
+	ts := testServer(t)
+	req, _ := http.NewRequest("POST", ts.URL+"/api/v1/rooms",
+		strings.NewReader(`{"deck":"fibonacci"} {"smuggled":"tail"}`))
+	req.Header.Set("X-Forwarded-For", "10.11.0.1")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("trailing data = %d, want 400", resp.StatusCode)
+	}
+}
+
+func TestClientIP(t *testing.T) {
+	tests := []struct {
+		name       string
+		remoteAddr string
+		headers    map[string]string
+		want       string
+	}{
+		{"loopback trusts cf header", "127.0.0.1:9999",
+			map[string]string{"CF-Connecting-IP": "198.51.100.7", "X-Forwarded-For": "203.0.113.5"}, "198.51.100.7"},
+		{"loopback trusts xff", "127.0.0.1:9999",
+			map[string]string{"X-Forwarded-For": "203.0.113.5, 10.0.0.1"}, "203.0.113.5"},
+		{"loopback no headers", "127.0.0.1:9999", nil, "127.0.0.1"},
+		{"non-loopback ignores spoofed headers", "203.0.113.9:1234",
+			map[string]string{"CF-Connecting-IP": "198.51.100.7", "X-Forwarded-For": "1.2.3.4"}, "203.0.113.9"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := httptest.NewRequest("POST", "/api/v1/rooms", nil)
+			r.RemoteAddr = tt.remoteAddr
+			for k, v := range tt.headers {
+				r.Header.Set(k, v)
+			}
+			if got := clientIP(r); got != tt.want {
+				t.Fatalf("clientIP = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestRequestLogParticipantKind pins PLAN.md §7: the request log line
+// carries participant_kind where known (join, vote) — and never a vote
+// value.
+func TestRequestLogParticipantKind(t *testing.T) {
+	var buf strings.Builder
+	svc := room.NewService(room.NewMemStore(), slog.New(slog.DiscardHandler))
+	srv := &Server{Log: slog.New(slog.NewJSONHandler(&buf, nil)), Svc: svc}
+	ts := httptest.NewServer(srv.Handler())
+	t.Cleanup(ts.Close)
+
+	ip := "10.12.0.1"
+	roomID := createRoom(t, ts, ip, nil)
+	_, token := joinRoom(t, ts, ip, roomID, "claude", "agent")
+	vote(t, ts, ip, roomID, token, "5", "")
+
+	var joinLine, voteLine string
+	for _, line := range strings.Split(buf.String(), "\n") {
+		if strings.Contains(line, `"msg":"request"`) {
+			if strings.Contains(line, "/participants") {
+				joinLine = line
+			}
+			if strings.Contains(line, "/vote") {
+				voteLine = line
+			}
+		}
+	}
+	for name, line := range map[string]string{"join": joinLine, "vote": voteLine} {
+		if line == "" {
+			t.Fatalf("no request log line for %s", name)
+		}
+		if !strings.Contains(line, `"participant_kind":"agent"`) {
+			t.Errorf("%s request line missing participant_kind: %s", name, line)
+		}
+	}
+	if strings.Contains(voteLine, `"5"`) {
+		t.Errorf("vote request line contains a value-shaped token: %s", voteLine)
+	}
+}
+
 func TestBodyTooLarge(t *testing.T) {
 	ts := testServer(t)
 	big := fmt.Sprintf(`{"subject": %q}`, strings.Repeat("x", 17<<10))

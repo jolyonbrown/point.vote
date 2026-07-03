@@ -67,24 +67,26 @@ func (l *ipLimiter) prune() {
 	}
 }
 
-// clientIP prefers the Cloudflare header (the tunnel is the sole ingress in
-// production), then X-Forwarded-For, then the socket address.
-//
-// INVARIANT: these headers are only trustworthy because the app binds
-// 127.0.0.1 and Cloudflare overwrites CF-Connecting-IP at the edge. If the
-// bind is ever widened, a caller can spoof a fresh bucket per forged IP and
-// the create limit is void.
+// clientIP resolves the address the create rate limit is keyed on. Proxy
+// headers (CF-Connecting-IP from the tunnel, then X-Forwarded-For) are only
+// honoured when the TCP peer is loopback — i.e. cloudflared on this host,
+// the sole production ingress. From any other peer the socket address wins,
+// so widening the bind can't let callers mint a fresh bucket per forged
+// header.
 func clientIP(r *http.Request) string {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+	if ip := net.ParseIP(host); ip == nil || !ip.IsLoopback() {
+		return host
+	}
 	if ip := r.Header.Get("CF-Connecting-IP"); ip != "" {
 		return ip
 	}
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
 		first, _, _ := strings.Cut(xff, ",")
 		return strings.TrimSpace(first)
-	}
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
 	}
 	return host
 }
