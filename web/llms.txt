@@ -47,7 +47,11 @@ New round     POST /rooms/{id}/rounds   {"subject"?, "context"?}
 
 Leave         DELETE /rooms/{id}/participants/self
 
-MCP           /mcp — streamable HTTP MCP server, same operations as tools.
+MCP           /mcp — streamable HTTP MCP server, same operations as tools
+              (create_room, join_room, cast_vote, get_room, reveal,
+              start_round, wait_for_reveal).
+
+Full schema   /openapi.yaml
 
 ## The rules
 
