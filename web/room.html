@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>point.vote — room</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='5' y='2' width='22' height='28' rx='4' fill='%23f6a726'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%23171310'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="room">
+
+<header class="site-head">
+  <a class="wordmark" href="/">point<span class="dot">.</span>vote</a>
+  <div class="room-meta">
+    <span id="live" class="live" title="connection">●</span>
+    <code id="room-id"></code>
+    <button id="copy-link" class="btn btn-small">Copy link</button>
+  </div>
+</header>
+
+<main class="room" id="room-main" hidden>
+
+  <section class="round-head">
+    <p class="round-no" id="round-no"></p>
+    <h1 id="subject"></h1>
+    <details id="context-box" hidden>
+      <summary>Context</summary>
+      <pre id="context"></pre>
+    </details>
+    <p class="status" id="status" aria-live="polite"></p>
+  </section>
+
+  <section class="table">
+    <div class="cards-wrap">
+      <div id="cards" class="cards" role="radiogroup" aria-label="Your vote"></div>
+      <p id="observer-note" class="fine" hidden>You're observing. Look, don't touch.</p>
+      <div class="rationale-row" id="rationale-row">
+        <input id="rationale" type="text" maxlength="500"
+          placeholder="Why? (optional — hidden until reveal)" aria-label="Rationale">
+      </div>
+      <div class="controls">
+        <button id="reveal" class="btn btn-primary" hidden>Reveal</button>
+        <span class="next-round" id="next-round-row" hidden>
+          <input id="next-subject" type="text" maxlength="200" placeholder="Next subject (optional)" aria-label="Next subject">
+          <button id="next-round" class="btn btn-primary">New round</button>
+        </span>
+      </div>
+    </div>
+
+    <aside class="people">
+      <h2>At the table</h2>
+      <ul id="participants"></ul>
+    </aside>
+  </section>
+
+  <section id="results" class="results" hidden aria-live="polite">
+    <h2 id="results-title"></h2>
+    <div id="stats" class="stats"></div>
+    <div id="votes" class="votes"></div>
+  </section>
+
+  <details id="history-box" class="history" hidden>
+    <summary id="history-summary"></summary>
+    <ul id="history"></ul>
+  </details>
+
+</main>
+
+<main class="room-missing" id="room-missing" hidden>
+  <h1>No such table.</h1>
+  <p>This room has expired or never existed. Rooms evaporate after two hours of quiet.</p>
+  <p><a class="btn btn-primary" href="/">Start a fresh one</a></p>
+</main>
+
+<dialog id="join-dialog">
+  <form id="join-form" method="dialog">
+    <h2>Pull up a chair</h2>
+    <label for="name">Name</label>
+    <input id="name" type="text" maxlength="40" required autocomplete="nickname" placeholder="Who's asking?">
+    <label for="kind">Joining as</label>
+    <select id="kind">
+      <option value="human" selected>Human — votes</option>
+      <option value="agent">Agent — votes, but is software</option>
+      <option value="observer">Observer — look, don't touch</option>
+    </select>
+    <button class="btn btn-primary" id="join-btn">Join</button>
+    <p class="fine">No account. Your name lives in this browser and nowhere else.</p>
+  </form>
+</dialog>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="/app.js"></script>
+</body>
+</html>

@@ -43,6 +43,7 @@ func (s *Server) Handler() http.Handler {
 	s.limiter = newIPLimiter(s.CreatePerHour)
 
 	mux := http.NewServeMux()
+	mountStatic(mux)
 	mux.HandleFunc("GET /healthz", s.handleHealthz)
 	mux.HandleFunc("POST /api/v1/rooms", s.handleCreateRoom)
 	mux.HandleFunc("POST /api/v1/rooms/{id}/participants", s.handleJoin)
