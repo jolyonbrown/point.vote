@@ -64,6 +64,19 @@ func TestComputeStats(t *testing.T) {
 			numeric: false, consensus: false,
 			counts: map[string]int{},
 		},
+		{
+			// ParseFloat accepts these literals, but non-finite floats are
+			// unmarshalable JSON and would brick the room; they must count
+			// as non-numeric.
+			name: "non-finite parses excluded", values: []string{"NaN", "Inf", "-Inf", "Infinity"},
+			numeric: false, consensus: false,
+			counts: map[string]int{"NaN": 1, "Inf": 1, "-Inf": 1, "Infinity": 1},
+		},
+		{
+			name: "non-finite alongside numeric", values: []string{"NaN", "5"},
+			min: 5, max: 5, median: 5, mean: 5, spread: 0, consensus: true, numeric: true,
+			counts: map[string]int{"NaN": 1, "5": 1},
+		},
 	}
 
 	for _, tt := range tests {

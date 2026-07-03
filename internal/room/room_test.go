@@ -422,6 +422,32 @@ func drainEvents(t *testing.T, ch <-chan Event, f func(Event)) {
 	}
 }
 
+// TestNaNDeckStillSerializes pins the fix for the reviewer-found bug: a
+// custom deck containing "NaN"/"Inf" must never produce a State that
+// encoding/json refuses to marshal — including after the round is archived
+// into history.
+func TestNaNDeckStillSerializes(t *testing.T) {
+	r := NewRoom("nan-room-00", []string{"NaN", "Inf", "1"}, "", "", true, t0)
+	_, alice := join(t, r, "Alice", KindHuman)
+	revealed := mustVote(t, r, alice, "NaN", "") // sole voter → auto-reveal
+	if revealed == nil {
+		t.Fatal("expected auto-reveal")
+	}
+	if revealed.Results.Stats.Min != nil {
+		t.Fatal("NaN treated as numeric")
+	}
+	if _, err := json.Marshal(revealed); err != nil {
+		t.Fatalf("revealed state unmarshalable: %v", err)
+	}
+	// Archive it and make sure history snapshots stay serialisable too.
+	if _, err := r.StartRound(alice, "", "", t0); err != nil {
+		t.Fatalf("StartRound: %v", err)
+	}
+	if _, err := json.Marshal(r.Snapshot(t0)); err != nil {
+		t.Fatalf("state with archived NaN round unmarshalable: %v", err)
+	}
+}
+
 func TestSubscribeEventNames(t *testing.T) {
 	r := fibRoom(t, true)
 	_, alice := join(t, r, "Alice", KindHuman)

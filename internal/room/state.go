@@ -37,12 +37,14 @@ type Results struct {
 	Stats Stats          `json:"stats"`
 }
 
-// RevealedVote is one participant's revealed vote.
+// RevealedVote is one participant's revealed vote. Rationale is always
+// present (possibly empty) so the §4 votes shape is stable for the web UI
+// and openapi.yaml.
 type RevealedVote struct {
 	Name      string `json:"name"`
 	Kind      string `json:"kind"`
 	Value     string `json:"value"`
-	Rationale string `json:"rationale,omitempty"`
+	Rationale string `json:"rationale"`
 }
 
 // Stats summarises revealed votes. The numeric fields are null when no vote

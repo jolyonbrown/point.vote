@@ -1,19 +1,22 @@
 package room
 
 import (
+	"math"
 	"sort"
 	"strconv"
 )
 
 // computeStats counts every value and does the maths over the votes that
 // parse as numbers. Consensus means at least one numeric vote and all
-// numeric votes equal.
+// numeric votes equal. Non-finite parses ("NaN", "Inf") count as
+// non-numeric: they would poison the stats and encoding/json cannot
+// marshal them, which would brick every read path of the room.
 func computeStats(votes []RevealedVote) Stats {
 	counts := make(map[string]int, len(votes))
 	var nums []float64
 	for _, v := range votes {
 		counts[v.Value]++
-		if f, err := strconv.ParseFloat(v.Value, 64); err == nil {
+		if f, err := strconv.ParseFloat(v.Value, 64); err == nil && !math.IsNaN(f) && !math.IsInf(f, 0) {
 			nums = append(nums, f)
 		}
 	}

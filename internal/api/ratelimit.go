@@ -69,6 +69,11 @@ func (l *ipLimiter) prune() {
 
 // clientIP prefers the Cloudflare header (the tunnel is the sole ingress in
 // production), then X-Forwarded-For, then the socket address.
+//
+// INVARIANT: these headers are only trustworthy because the app binds
+// 127.0.0.1 and Cloudflare overwrites CF-Connecting-IP at the edge. If the
+// bind is ever widened, a caller can spoof a fresh bucket per forged IP and
+// the create limit is void.
 func clientIP(r *http.Request) string {
 	if ip := r.Header.Get("CF-Connecting-IP"); ip != "" {
 		return ip
