@@ -26,6 +26,7 @@ const (
 type Server struct {
 	Log           *slog.Logger
 	Svc           *room.Service
+	MCP           http.Handler // mounted at /mcp when non-nil
 	Heartbeat     time.Duration
 	CreatePerHour int
 
@@ -44,6 +45,9 @@ func (s *Server) Handler() http.Handler {
 
 	mux := http.NewServeMux()
 	mountStatic(mux)
+	if s.MCP != nil {
+		mux.Handle("/mcp", s.MCP)
+	}
 	mux.HandleFunc("GET /healthz", s.handleHealthz)
 	mux.HandleFunc("POST /api/v1/rooms", s.handleCreateRoom)
 	mux.HandleFunc("POST /api/v1/rooms/{id}/participants", s.handleJoin)

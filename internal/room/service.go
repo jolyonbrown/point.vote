@@ -153,6 +153,59 @@ func (s *Service) Subscribe(roomID string) (<-chan Event, func(), error) {
 	return ch, cancel, nil
 }
 
+// WaitForReveal blocks until the current round is revealed, the timeout
+// elapses, or ctx is done, then returns the room state. It backs both the
+// REST long-poll and the MCP wait_for_reveal tool.
+func (s *Service) WaitForReveal(ctx context.Context, roomID string, timeout time.Duration) (State, error) {
+	// Subscribe before the first state check so a reveal can't slip
+	// between the two.
+	ch, cancel, err := s.Subscribe(roomID)
+	if err != nil {
+		return State{}, err
+	}
+	defer cancel()
+
+	st, err := s.State(roomID)
+	if err != nil {
+		return State{}, err
+	}
+	if st.Round.State == StateRevealed || timeout <= 0 {
+		return st, nil
+	}
+
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	// Subscriber channels drop events rather than block (slow-consumer
+	// rule), so a reveal could in principle be missed under a stampede;
+	// the recheck ticker bounds that wait to two seconds.
+	recheck := time.NewTicker(2 * time.Second)
+	defer recheck.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return State{}, ctx.Err()
+		case <-timer.C:
+			return s.State(roomID)
+		case <-recheck.C:
+			st, err := s.State(roomID)
+			if err != nil {
+				return State{}, err
+			}
+			if st.Round.State == StateRevealed {
+				return st, nil
+			}
+		case ev, open := <-ch:
+			if !open {
+				return State{}, ErrRoomNotFound
+			}
+			if ev.State.Round.State == StateRevealed {
+				return ev.State, nil
+			}
+		}
+	}
+}
+
 // RoomCount reports live rooms, for /healthz.
 func (s *Service) RoomCount() int { return s.store.Count() }
 
