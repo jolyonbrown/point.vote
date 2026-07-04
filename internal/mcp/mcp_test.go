@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -87,6 +88,33 @@ func TestBodyCap(t *testing.T) {
 	defer resp.Body.Close()
 	if resp.StatusCode < 400 || resp.StatusCode >= 500 {
 		t.Fatalf("oversized /mcp body = %d, want 4xx", resp.StatusCode)
+	}
+}
+
+// TestPublicHostHeader pins the production topology: cloudflared delivers
+// requests to loopback with the public Host header, which the SDK's
+// DNS-rebinding protection would otherwise 403. Regression for the launch
+// outage where every MCP call through the tunnel was Forbidden.
+func TestPublicHostHeader(t *testing.T) {
+	svc := room.NewService(room.NewMemStore(), slog.New(slog.DiscardHandler))
+	mux := http.NewServeMux()
+	mux.Handle("/mcp", Handler(svc, slog.New(slog.DiscardHandler)))
+	ts := httptest.NewServer(mux)
+	t.Cleanup(ts.Close)
+
+	req, _ := http.NewRequest("POST", ts.URL+"/mcp",
+		strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
+	req.Host = "point.vote" // loopback connection, public Host — the tunnel shape
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json, text/event-stream")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("ping with public Host = %d (%s), want 200", resp.StatusCode, body)
 	}
 }
 
