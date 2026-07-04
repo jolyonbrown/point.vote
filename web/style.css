@@ -108,6 +108,11 @@ a { color: var(--accent); text-underline-offset: 3px; }
   font-size: 0.85rem;
   font-family: var(--mono);
 }
+.site-foot p { margin: 0 0 0.35rem; }
+.colophon { font-size: 0.75rem; }
+.colophon a { color: var(--ink-dim); }
+.colophon a:hover { color: var(--accent); }
+.version { color: var(--accent); }
 
 /* ---------- landing ---------- */
 

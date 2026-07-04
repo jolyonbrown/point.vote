@@ -47,6 +47,24 @@ func TestStaticRoutes(t *testing.T) {
 		})
 	}
 
+	// Footer colophon: version substituted, credit linked, on both pages.
+	for _, path := range []string{"/", "/r/some-room-00"} {
+		resp, err := http.Get(ts.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if strings.Contains(string(body), "{{version}}") {
+			t.Fatalf("%s: version placeholder not substituted", path)
+		}
+		for _, want := range []string{">vTEST<", "github.com/jolyonbrown"} {
+			if !strings.Contains(string(body), want) {
+				t.Fatalf("%s: footer missing %q", path, want)
+			}
+		}
+	}
+
 	// The root pattern must be exact: unknown paths still 404.
 	resp, err := http.Get(ts.URL + "/definitely-not-a-page")
 	if err != nil {

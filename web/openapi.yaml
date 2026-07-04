@@ -517,7 +517,7 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
   /healthz:
     get:
-      summary: Liveness and room count
+      summary: Liveness, room count, running version
       responses:
         "200":
           description: OK
@@ -525,7 +525,8 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [ok, rooms]
+                required: [ok, rooms, version]
                 properties:
                   ok: { type: boolean }
                   rooms: { type: integer }
+                  version: { type: string, examples: [v1.2.0] }

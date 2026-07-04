@@ -22,6 +22,7 @@ func testServer(t *testing.T) *httptest.Server {
 	srv := &Server{
 		Log:       slog.New(slog.DiscardHandler),
 		Svc:       svc,
+		Version:   "vTEST",
 		Heartbeat: 50 * time.Millisecond,
 	}
 	ts := httptest.NewServer(srv.Handler())
@@ -107,6 +108,9 @@ func TestHealthz(t *testing.T) {
 	}
 	if resp["rooms"].(float64) != 0 {
 		t.Fatalf("rooms = %v, want 0", resp["rooms"])
+	}
+	if resp["version"] != "vTEST" {
+		t.Fatalf("version = %v, want vTEST", resp["version"])
 	}
 	createRoom(t, ts, "10.0.0.1", nil)
 	_, resp, _ = doJSON(t, "GET", ts.URL+"/healthz", "", "10.0.0.1", nil)

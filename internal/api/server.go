@@ -27,6 +27,7 @@ type Server struct {
 	Log           *slog.Logger
 	Svc           *room.Service
 	MCP           http.Handler // mounted at /mcp when non-nil
+	Version       string       // shown in /healthz and page footers
 	Heartbeat     time.Duration
 	CreatePerHour int
 
@@ -41,10 +42,13 @@ func (s *Server) Handler() http.Handler {
 	if s.CreatePerHour == 0 {
 		s.CreatePerHour = defaultCreatePerHour
 	}
+	if s.Version == "" {
+		s.Version = "dev"
+	}
 	s.limiter = newIPLimiter(s.CreatePerHour)
 
 	mux := http.NewServeMux()
-	mountStatic(mux)
+	s.mountStatic(mux)
 	if s.MCP != nil {
 		mux.Handle("/mcp", s.MCP)
 	}
@@ -64,7 +68,7 @@ func (s *Server) Handler() http.Handler {
 }
 
 func (s *Server) handleHealthz(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "rooms": s.Svc.RoomCount()})
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "rooms": s.Svc.RoomCount(), "version": s.Version})
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
