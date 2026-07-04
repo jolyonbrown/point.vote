@@ -508,6 +508,71 @@ func TestSSEHeartbeat(t *testing.T) {
 	}
 }
 
+func TestSettle(t *testing.T) {
+	ts := testServer(t)
+	ip := "10.14.0.1"
+	roomID := createRoom(t, ts, ip, nil)
+	_, alice := joinRoom(t, ts, ip, roomID, "Alice", "human")
+	_, bob := joinRoom(t, ts, ip, roomID, "Bob", "human")
+
+	// 409 while the round is still voting.
+	status, resp, _ := doJSON(t, "POST", ts.URL+"/api/v1/rooms/"+roomID+"/settle", alice, ip,
+		map[string]string{"value": "8"})
+	if status != http.StatusConflict {
+		t.Fatalf("settle while voting = %d %v, want 409", status, resp)
+	}
+
+	vote(t, ts, ip, roomID, alice, "5", "")
+	vote(t, ts, ip, roomID, bob, "13", "") // auto-reveal
+
+	// top is a tie at this point — the natural pre-settle diagnostic.
+	_, resp, _ = doJSON(t, "GET", ts.URL+"/api/v1/rooms/"+roomID, "", ip, nil)
+	top := resp["results"].(map[string]any)["stats"].(map[string]any)["top"].(map[string]any)
+	if top["tied"] != true {
+		t.Fatalf("top = %v, want tie", top)
+	}
+
+	// Off-deck value and bad token.
+	if status, _, _ := doJSON(t, "POST", ts.URL+"/api/v1/rooms/"+roomID+"/settle", alice, ip,
+		map[string]string{"value": "4"}); status != http.StatusBadRequest {
+		t.Fatalf("off-deck settle = %d, want 400", status)
+	}
+	if status, _, _ := doJSON(t, "POST", ts.URL+"/api/v1/rooms/"+roomID+"/settle", "bogus", ip,
+		map[string]string{"value": "8"}); status != http.StatusUnauthorized {
+		t.Fatalf("bad-token settle = %d, want 401", status)
+	}
+
+	// The real thing.
+	status, resp, _ = doJSON(t, "POST", ts.URL+"/api/v1/rooms/"+roomID+"/settle", alice, ip,
+		map[string]string{"value": "8"})
+	if status != http.StatusOK {
+		t.Fatalf("settle = %d %v", status, resp)
+	}
+	settled := resp["settled"].(map[string]any)
+	if settled["value"] != "8" || settled["by"] != "Alice" {
+		t.Fatalf("settled = %v", settled)
+	}
+	awards := settled["awards"].([]any)
+	if len(awards) == 0 {
+		t.Fatal("no awards in settle response")
+	}
+	ids := map[string]bool{}
+	for _, a := range awards {
+		ids[a.(map[string]any)["id"].(string)] = true
+	}
+	// 5 and 13 are equidistant from 8: shared oracle, no outlier, and the
+	// single round means no diplomat.
+	if !ids["oracle"] || ids["saw_something"] || ids["diplomat"] {
+		t.Fatalf("award ids = %v", ids)
+	}
+
+	// Settlement is visible on plain GET for everyone.
+	_, resp, _ = doJSON(t, "GET", ts.URL+"/api/v1/rooms/"+roomID, "", ip, nil)
+	if resp["settled"].(map[string]any)["value"] != "8" {
+		t.Fatalf("GET settled = %v", resp["settled"])
+	}
+}
+
 func TestReact(t *testing.T) {
 	ts := testServer(t)
 	ip := "10.13.0.1"

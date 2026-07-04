@@ -108,11 +108,33 @@ echo "$ROUND2" | jq -e '.history[0].votes | length == 2' >/dev/null \
   || fail "history missing votes"
 pass "new round archives history, increments seq"
 
+# --- Settle: record the outcome, collect the confetti ----------------------
+
+# Round 2 is voting; settling now must 409.
+CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$API/rooms/$ROOM/settle" \
+  -H "Authorization: Bearer $ALICE_TOKEN" -d '{"value":"8"}')
+[ "$CODE" = "409" ] || fail "settle while voting returned $CODE, want 409"
+
+curl -s -X POST "$API/rooms/$ROOM/vote" \
+  -H "Authorization: Bearer $ALICE_TOKEN" -d '{"value":"8"}' >/dev/null
+curl -s -X POST "$API/rooms/$ROOM/vote" \
+  -H "Authorization: Bearer $CLAUDE_TOKEN" -d '{"value":"8"}' >/dev/null   # auto-reveal
+
+SETTLED=$(curl -s -X POST "$API/rooms/$ROOM/settle" \
+  -H "Authorization: Bearer $ALICE_TOKEN" -d '{"value":"8"}')
+echo "$SETTLED" | jq -e '.settled.value == "8" and .settled.by == "Alice"' >/dev/null \
+  || fail "settle wrong: $(echo "$SETTLED" | jq -c .settled)"
+echo "$SETTLED" | jq -e '.settled.awards | length >= 3' >/dev/null \
+  || fail "expected awards: $(echo "$SETTLED" | jq -c .settled.awards)"
+echo "$SETTLED" | jq -e '.results.stats.top.values == ["8"] and .results.stats.top.tied == false' >/dev/null \
+  || fail "top wrong after unanimous round: $(echo "$SETTLED" | jq -c .results.stats.top)"
+pass "settled on 8; awards handed out; top computed"
+
 # --- Stretch: terminal rendering and the peanut gallery --------------------
 
 TEXT=$(curl -s -H "Accept: text/plain" "$API/rooms/$ROOM")
 echo "$TEXT" | grep -q "point.vote · $ROOM" || fail "text rendering missing header"
-echo "$TEXT" | grep -q "round 2 · voting" || fail "text rendering missing round line"
+echo "$TEXT" | grep -q "settled on 8 — called by Alice" || fail "text rendering missing verdict"
 pass "Accept: text/plain renders the room as text"
 
 curl -s -X POST "$API/rooms/$ROOM/react" \

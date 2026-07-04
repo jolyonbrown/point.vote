@@ -44,6 +44,10 @@
           <input id="next-subject" type="text" maxlength="200" placeholder="Next subject (optional)" aria-label="Next subject">
           <button id="next-round" class="btn btn-primary">New round</button>
         </span>
+        <span class="settle-controls" id="settle-row" hidden>
+          <select id="settle-value" aria-label="Settled value"></select>
+          <button id="settle" class="btn">Call it</button>
+        </span>
       </div>
     </div>
 
@@ -58,6 +62,12 @@
     <h2 id="results-title"></h2>
     <div id="stats" class="stats"></div>
     <div id="votes" class="votes"></div>
+  </section>
+
+  <section id="settlement" class="settlement" hidden aria-live="polite">
+    <h2>The verdict</h2>
+    <p id="settled-line"></p>
+    <div id="awards"></div>
   </section>
 
   <details id="history-box" class="history" hidden>

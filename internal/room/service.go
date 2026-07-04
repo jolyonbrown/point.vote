@@ -143,6 +143,21 @@ func (s *Service) Leave(roomID, token string) error {
 	return nil
 }
 
+// Settle records the room's outcome. The value is public by the time it
+// can be called (round revealed), so logging it is fine — unlike votes.
+func (s *Service) Settle(roomID, token, value string) (State, error) {
+	r, err := s.room(roomID)
+	if err != nil {
+		return State{}, err
+	}
+	st, err := r.Settle(token, value, s.now())
+	if err != nil {
+		return State{}, err
+	}
+	s.log.Info("settled", "room_id", roomID, "value", value, "awards", len(st.Settled.Awards))
+	return st, nil
+}
+
 // React throws a transient peanut-gallery reaction into the room.
 func (s *Service) React(roomID, token, emoji string) error {
 	r, err := s.room(roomID)

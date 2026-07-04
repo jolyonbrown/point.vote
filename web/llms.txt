@@ -32,7 +32,8 @@ Vote (blind)  POST /rooms/{id}/vote   {"value": string, "rationale"?: string}
 State         GET /rooms/{id}
               While voting you get has_voted flags only — never values.
               "results" is null until revealed, then carries votes + stats
-              (min/max/median/mean/spread/consensus/counts).
+              (min/max/median/mean/spread/consensus/counts, plus "top": the
+              modal value(s) — the natural result for decision decks).
               Send "Accept: text/plain" for an aligned terminal rendering.
 
 Wait          GET /rooms/{id}/result?timeout=30   Long-poll (max 55s):
@@ -46,6 +47,13 @@ Reveal        POST /rooms/{id}/reveal    (any participant; auto-reveal fires
 New round     POST /rooms/{id}/rounds   {"subject"?, "context"?}
               Archives the revealed round to history, opens the next.
 
+Settle        POST /rooms/{id}/settle   {"value": "<deck member>"}
+              Record what the room agreed on (round must be revealed;
+              calling again overwrites). State gains "settled":
+              {value, by, settled_at, awards} — awards are ephemeral
+              end-of-session fun anchored to blind first votes, and the
+              SSE stream emits a "settled" event.
+
 Leave         DELETE /rooms/{id}/participants/self
 
 React         POST /rooms/{id}/react   {"emoji":"👏"}   (any participant;
@@ -54,7 +62,7 @@ React         POST /rooms/{id}/react   {"emoji":"👏"}   (any participant;
 
 MCP           /mcp — streamable HTTP MCP server, same operations as tools
               (create_room, join_room, cast_vote, get_room, reveal,
-              start_round, wait_for_reveal).
+              start_round, settle, wait_for_reveal).
 
 Full schema   /openapi.yaml
 Claude Skill  /skill (SKILL.md teaching this loop)

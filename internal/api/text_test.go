@@ -90,9 +90,23 @@ func TestPlainTextRoom(t *testing.T) {
 	t.Run("revealed: votes and stats", func(t *testing.T) {
 		vote(t, ts, ip, roomID, bob, "13", "") // completes the round
 		body, _ := getText(t, url)
-		for _, want := range []string{"round 1 · revealed", "results", `"` + canary + `"`, "spread 8 · median 9 · mean 9 · consensus false"} {
+		for _, want := range []string{"round 1 · revealed", "results", `"` + canary + `"`, "top 5/13 (tie) · spread 8 · median 9 · mean 9 · consensus false"} {
 			if !strings.Contains(body, want) {
 				t.Fatalf("revealed text missing %q:\n%s", want, body)
+			}
+		}
+	})
+
+	t.Run("settled: verdict and awards", func(t *testing.T) {
+		status, _, _ := doJSON(t, "POST", ts.URL+"/api/v1/rooms/"+roomID+"/settle", alice, ip,
+			map[string]string{"value": "8"})
+		if status != http.StatusOK {
+			t.Fatalf("settle = %d", status)
+		}
+		body, _ := getText(t, url)
+		for _, want := range []string{"settled on 8 — called by Alice", "The Oracle:"} {
+			if !strings.Contains(body, want) {
+				t.Fatalf("settled text missing %q:\n%s", want, body)
 			}
 		}
 	})

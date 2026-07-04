@@ -38,7 +38,7 @@ components:
               type: string
     State:
       type: object
-      required: [room_id, deck, auto_reveal, round, results, history]
+      required: [room_id, deck, auto_reveal, round, results, history, settled]
       properties:
         room_id: { type: string, examples: [mint-otter-42] }
         deck:
@@ -55,6 +55,11 @@ components:
           type: array
           maxItems: 20
           items: { $ref: "#/components/schemas/RoundSummary" }
+        settled:
+          oneOf:
+            - $ref: "#/components/schemas/Settlement"
+            - type: "null"
+          description: null until someone records the outcome via settle
     RoundState:
       type: object
       required: [seq, subject, context, state, votes_cast, participants]
@@ -98,7 +103,7 @@ components:
         Non-numeric votes ("?", "☕") are counted but excluded from the
         maths. Consensus means at least one numeric vote and all numeric
         votes equal.
-      required: [min, max, median, mean, spread, consensus, counts]
+      required: [min, max, median, mean, spread, consensus, counts, top]
       properties:
         min: { type: [number, "null"] }
         max: { type: [number, "null"] }
@@ -109,6 +114,49 @@ components:
         counts:
           type: object
           additionalProperties: { type: integer }
+        top:
+          oneOf:
+            - $ref: "#/components/schemas/Top"
+            - type: "null"
+          description: modal value(s); null when nobody voted
+    Top:
+      type: object
+      description: >
+        The most-voted value(s), in deck order. The natural result for
+        decision decks; ties are reported honestly rather than broken.
+      required: [values, count, tied]
+      properties:
+        values:
+          type: array
+          items: { type: string }
+        count: { type: integer }
+        tied: { type: boolean }
+    Settlement:
+      type: object
+      description: >
+        The recorded outcome of the deliberation, in RAM like everything
+        else. Awards are ephemeral end-of-session fun, anchored to blind
+        first-round votes measured against the settled value.
+      required: [value, by, settled_at, awards]
+      properties:
+        value: { type: string }
+        by: { type: string }
+        settled_at: { type: string, format: date-time }
+        awards:
+          type: array
+          items: { $ref: "#/components/schemas/Award" }
+    Award:
+      type: object
+      required: [id, title, names, detail]
+      properties:
+        id:
+          type: string
+          enum: [oracle, saw_something, diplomat, optimist, pessimist]
+        title: { type: string }
+        names:
+          type: array
+          items: { type: string }
+        detail: { type: string }
     RoundSummary:
       type: object
       required: [seq, subject, votes, stats]
@@ -337,6 +385,40 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
+  /api/v1/rooms/{id}/settle:
+    post:
+      summary: Record what the room agreed on
+      description: >
+        Any participant (observers included — the orchestrator pattern).
+        Requires the current round to be revealed; settling again
+        overwrites — rooms may change their minds. Computes the
+        end-of-session awards from the retained rounds.
+      security: [{ participantToken: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [value]
+              properties:
+                value: { type: string, description: must be a member of the room's deck }
+      responses:
+        "200":
+          description: Settled state, including awards
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/State" }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/BadToken" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Current round still voting (code wrong_state)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
   /api/v1/rooms/{id}/react:
     post:
       summary: Throw a peanut-gallery reaction
@@ -415,9 +497,9 @@ paths:
       summary: Server-sent events stream
       description: >
         Named events: state (initial snapshot, also sent on reconnect),
-        joined, left, voted, revealed, round_started. Every event's data
-        payload is the full redacted room state — snapshots, not diffs.
-        The one exception: transient "reaction" events carry
+        joined, left, voted, revealed, round_started, settled. Every
+        event's data payload is the full redacted room state — snapshots,
+        not diffs. The one exception: transient "reaction" events carry
         {"name","kind","emoji"} instead of state. Heartbeat comment
         every 25s.
       parameters:

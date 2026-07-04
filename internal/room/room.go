@@ -141,6 +141,7 @@ type Room struct {
 	joinSeq      int
 	round        *round
 	history      []RoundSummary
+	settled      *Settlement
 	lastActive   time.Time
 	subs         map[chan Event]struct{}
 	eventSeq     int
@@ -331,7 +332,7 @@ func (r *Room) buildResultsLocked() *Results {
 			votes = append(votes, RevealedVote{Name: p.name, Kind: p.kind, Value: v.Value, Rationale: v.Rationale})
 		}
 	}
-	return &Results{Votes: votes, Stats: computeStats(votes)}
+	return &Results{Votes: votes, Stats: computeStats(votes, r.deck)}
 }
 
 // Reveal flips the round to revealed. Any participant may do it.
@@ -450,6 +451,47 @@ func (r *Room) React(token, emoji string, now time.Time) error {
 	return nil
 }
 
+// Settle records the deliberation's outcome: the value the room agreed
+// on. Any participant may call it (observers included — that is the
+// orchestrator pattern), the current round must be revealed (settling a
+// blind round would be a nonsense), and calling it again overwrites —
+// rooms are allowed to change their minds. Awards are computed from the
+// retained rounds at the moment of settling.
+func (r *Room) Settle(token, value string, now time.Time) (State, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.closed {
+		return State{}, ErrRoomNotFound
+	}
+	r.lastActive = now
+	p, err := r.authLocked(token)
+	if err != nil {
+		return State{}, err
+	}
+	if !slices.Contains(r.deck, value) {
+		return State{}, validationf("value %q is not in this room's deck", value)
+	}
+	if r.round.state != StateRevealed {
+		return State{}, ErrWrongState
+	}
+
+	rounds := slices.Clone(r.history)
+	rounds = append(rounds, RoundSummary{
+		Seq:     r.round.seq,
+		Subject: r.round.subject,
+		Votes:   r.round.results.Votes,
+		Stats:   r.round.results.Stats,
+	})
+	r.settled = &Settlement{
+		Value:     value,
+		By:        p.name,
+		SettledAt: now,
+		Awards:    computeAwards(rounds, r.deck, value),
+	}
+	r.broadcastLocked("settled")
+	return r.snapshotLocked(), nil
+}
+
 // Snapshot returns the current wire state, redacted while voting.
 func (r *Room) Snapshot(now time.Time) State {
 	r.mu.Lock()
@@ -480,6 +522,7 @@ func (r *Room) snapshotLocked() State {
 			Participants: parts,
 		},
 		History: slices.Clone(r.history),
+		Settled: r.settled,
 	}
 	if r.round.state == StateRevealed {
 		st.Results = r.round.results
