@@ -147,6 +147,10 @@ components:
           items: { $ref: "#/components/schemas/Award" }
     Award:
       type: object
+      description: >
+        Accuracy awards anchor to the earliest RETAINED round's blind
+        votes (history keeps the last 20 rounds; the detail string names
+        the actual round used).
       required: [id, title, names, detail]
       properties:
         id:

@@ -84,6 +84,10 @@ type RoundSummary struct {
 // Settlement records the deliberation's outcome: the value the room
 // settled on, who called it, and the awards computed at that moment. In
 // RAM like everything else; it evaporates with the room.
+//
+// Immutable once published: snapshots share the pointer (the same
+// pattern as Results and history entries), and re-settling replaces the
+// whole Settlement rather than mutating it.
 type Settlement struct {
 	Value     string    `json:"value"`
 	By        string    `json:"by"`

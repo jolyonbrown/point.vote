@@ -2,6 +2,7 @@ package room
 
 import (
 	"slices"
+	"strings"
 	"testing"
 	"time"
 )
@@ -101,6 +102,32 @@ func TestComputeAwards(t *testing.T) {
 		}
 	})
 
+	t.Run("escape cards cannot win accuracy awards on numeric settles", func(t *testing.T) {
+		// carol's "?" would be deck-adjacent to nothing sensible; she
+		// competes for no accuracy award. a and b are equidistant from 8.
+		rounds := []RoundSummary{summaryOf(1, fib, "a", "5", "b", "13", "carol", "?")}
+		awards := computeAwards(rounds, fib, "8")
+		oracle := awardByID(t, awards, "oracle")
+		if oracle == nil || slices.Contains(oracle.Names, "carol") || len(oracle.Names) != 2 {
+			t.Fatalf("oracle = %+v, want a and b only", oracle)
+		}
+		if saw := awardByID(t, awards, "saw_something"); saw != nil {
+			t.Fatalf("saw_something = %+v, want none (numeric votes were equidistant)", saw)
+		}
+	})
+
+	t.Run("tied outliers on the same card read cleanly", func(t *testing.T) {
+		rounds := []RoundSummary{summaryOf(1, fib, "a", "0", "b", "0", "c", "8")}
+		awards := computeAwards(rounds, fib, "8")
+		saw := awardByID(t, awards, "saw_something")
+		if saw == nil || len(saw.Names) != 2 {
+			t.Fatalf("saw_something = %+v, want a and b", saw)
+		}
+		if strings.Contains(saw.Detail, "0/0") {
+			t.Fatalf("detail duplicates the shared value: %q", saw.Detail)
+		}
+	})
+
 	t.Run("single round means no diplomat", func(t *testing.T) {
 		awards := computeAwards([]RoundSummary{summaryOf(1, fib, "a", "5", "b", "8")}, fib, "8")
 		if awardByID(t, awards, "diplomat") != nil {
@@ -189,6 +216,56 @@ func TestSettle(t *testing.T) {
 		}
 		if st.Settled.Value != "8" {
 			t.Fatalf("re-settle value = %q, want 8", st.Settled.Value)
+		}
+	})
+
+	t.Run("settle, next round, reveal, re-settle: no double counting", func(t *testing.T) {
+		r := fibRoom(t, false)
+		_, alice := join(t, r, "Alice", KindHuman)
+		_, bob := join(t, r, "Bob", KindHuman)
+
+		// Round 1: 3 vs 13, revealed, settled on 8.
+		mustVote(t, r, alice, "3", "")
+		mustVote(t, r, bob, "13", "")
+		if _, err := r.Reveal(alice, t0); err != nil {
+			t.Fatalf("Reveal: %v", err)
+		}
+		if _, err := r.Settle(alice, "8", t0); err != nil {
+			t.Fatalf("Settle 1: %v", err)
+		}
+		if _, err := r.StartRound(alice, "round 2", "", t0); err != nil {
+			t.Fatalf("StartRound: %v", err)
+		}
+
+		// Round 2: both on 8, revealed, re-settled.
+		mustVote(t, r, alice, "8", "")
+		mustVote(t, r, bob, "8", "")
+		if _, err := r.Reveal(alice, t0); err != nil {
+			t.Fatalf("Reveal 2: %v", err)
+		}
+		st, err := r.Settle(bob, "8", t0)
+		if err != nil {
+			t.Fatalf("Settle 2: %v", err)
+		}
+
+		// Awards must see exactly rounds 1 and 2 once each: the diplomat
+		// exists (two distinct rounds), and the optimist/pessimist nets
+		// reflect single-counted round-1 votes (alice -2, bob +1).
+		if st.Settled.By != "Bob" || st.Settled.Value != "8" {
+			t.Fatalf("settled = %+v", st.Settled)
+		}
+		diplomat := awardByID(t, st.Settled.Awards, "diplomat")
+		if diplomat == nil || len(diplomat.Names) != 2 {
+			t.Fatalf("diplomat = %+v, want both movers", diplomat)
+		}
+		if opt := awardByID(t, st.Settled.Awards, "optimist"); opt == nil || !slices.Equal(opt.Names, []string{"Alice"}) {
+			t.Fatalf("optimist = %+v, want Alice only", opt)
+		}
+		if pess := awardByID(t, st.Settled.Awards, "pessimist"); pess == nil || !slices.Equal(pess.Names, []string{"Bob"}) {
+			t.Fatalf("pessimist = %+v, want Bob only", pess)
+		}
+		if oracle := awardByID(t, st.Settled.Awards, "oracle"); oracle == nil || !slices.Equal(oracle.Names, []string{"Bob"}) {
+			t.Fatalf("oracle = %+v, want Bob (13 is one step from 8, 3 is two)", oracle)
 		}
 	})
 

@@ -2,6 +2,7 @@ package room
 
 import (
 	"fmt"
+	"math"
 	"slices"
 	"strconv"
 	"strings"
@@ -29,6 +30,13 @@ func computeAwards(rounds []RoundSummary, deck []string, settled string) []Award
 	}
 	awards := []Award{}
 
+	// When the settled value is numeric, only numeric first votes compete
+	// for the accuracy awards: "?" means "I don't know", and crowning it
+	// The Oracle would be nonsense. Non-numeric settles keep whole-deck
+	// index distances — decks like t-shirt sizes are ordinal, and if a
+	// room settles on "?" it deserves whatever awards it gets.
+	settledNumeric := isNumericValue(settled)
+
 	first := rounds[0]
 	type firstVote struct {
 		name     string
@@ -37,6 +45,9 @@ func computeAwards(rounds []RoundSummary, deck []string, settled string) []Award
 	}
 	var firsts []firstVote
 	for _, v := range first.Votes {
+		if settledNumeric && !isNumericValue(v.Value) {
+			continue
+		}
 		if idx := slices.Index(deck, v.Value); idx >= 0 {
 			firsts = append(firsts, firstVote{v.Name, v.Value, abs(idx - settledIdx)})
 		}
@@ -80,7 +91,9 @@ func computeAwards(rounds []RoundSummary, deck []string, settled string) []Award
 			for _, f := range firsts {
 				if f.distance == worst {
 					names = append(names, f.name)
-					values = append(values, f.value)
+					if !slices.Contains(values, f.value) {
+						values = append(values, f.value)
+					}
 				}
 			}
 			awards = append(awards, Award{
@@ -119,17 +132,15 @@ func computeAwards(rounds []RoundSummary, deck []string, settled string) []Award
 	// vote cast, numeric decks only — direction means nothing for
 	// yes/no/abstain. Pure banter: this is bias against the group, not
 	// against reality, and the copy should never pretend otherwise.
-	if _, err := strconv.ParseFloat(settled, 64); err == nil {
+	if settledNumeric {
 		net := map[string]int{}
-		votesCast := map[string]int{}
 		for _, round := range rounds {
 			for _, v := range round.Votes {
-				if _, err := strconv.ParseFloat(v.Value, 64); err != nil {
+				if !isNumericValue(v.Value) {
 					continue
 				}
 				if idx := slices.Index(deck, v.Value); idx >= 0 {
 					net[v.Name] += idx - settledIdx
-					votesCast[v.Name]++
 				}
 			}
 		}
@@ -175,4 +186,10 @@ func abs(n int) int {
 		return -n
 	}
 	return n
+}
+
+// isNumericValue mirrors the stats maths: finite parses only.
+func isNumericValue(v string) bool {
+	f, err := strconv.ParseFloat(v, 64)
+	return err == nil && !math.IsNaN(f) && !math.IsInf(f, 0)
 }
