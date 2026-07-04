@@ -54,6 +54,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/v1/rooms/{id}", s.handleGetRoom)
 	mux.HandleFunc("POST /api/v1/rooms/{id}/vote", s.handleVote)
 	mux.HandleFunc("POST /api/v1/rooms/{id}/reveal", s.handleReveal)
+	mux.HandleFunc("POST /api/v1/rooms/{id}/react", s.handleReact)
 	mux.HandleFunc("POST /api/v1/rooms/{id}/rounds", s.handleStartRound)
 	mux.HandleFunc("DELETE /api/v1/rooms/{id}/participants/self", s.handleLeave)
 	mux.HandleFunc("GET /api/v1/rooms/{id}/result", s.handleResult)

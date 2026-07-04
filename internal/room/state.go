@@ -70,9 +70,20 @@ type RoundSummary struct {
 
 // Event is a room change notification: joined, left, voted, revealed or
 // round_started. State is the full post-change snapshot — snapshots beat
-// diffs for correctness and make clients trivial.
+// diffs for correctness and make clients trivial. The one exception is
+// the transient "reaction" event, which carries a Reaction instead of
+// state: it changes nothing, so there is no snapshot to carry.
 type Event struct {
-	ID    int
-	Name  string
-	State State
+	ID       int
+	Name     string
+	State    State
+	Reaction *Reaction
+}
+
+// Reaction is a peanut-gallery emote: fire-and-forget, never part of room
+// state, dropped for slow consumers without regret.
+type Reaction struct {
+	Name  string `json:"name"`
+	Kind  string `json:"kind"`
+	Emoji string `json:"emoji"`
 }

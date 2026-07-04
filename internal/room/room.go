@@ -55,7 +55,17 @@ var (
 	ErrRoomFull     = errors.New("room is full")
 	ErrServerFull   = errors.New("too many rooms; try again later")
 	ErrObserverVote = errors.New("observers cannot vote")
+	ErrTooFast      = errors.New("easy on the reactions; one per second")
 )
+
+// Reactions the peanut gallery may throw (PLAN.md §11). A fixed set keeps
+// the gallery tasteful and the payloads boring.
+var Reactions = []string{"👏", "🍿", "🤔", "😮", "🎉", "☕"}
+
+// reactionCooldown is the per-participant floor between reactions —
+// reactions fan out to every subscriber, so unthrottled they are a free
+// spam channel in a way votes are not.
+const reactionCooldown = time.Second
 
 // ValidationError marks a bad request field (HTTP 400).
 type ValidationError string
@@ -140,12 +150,13 @@ type Room struct {
 // Participant is a member of a room. The raw bearer token is never stored,
 // only its SHA-256.
 type Participant struct {
-	id        string
-	name      string
-	kind      string
-	tokenHash [32]byte
-	joinedAt  time.Time
-	seq       int // join order, for stable listings
+	id           string
+	name         string
+	kind         string
+	tokenHash    [32]byte
+	joinedAt     time.Time
+	seq          int // join order, for stable listings
+	lastReaction time.Time
 }
 
 type round struct {
@@ -407,6 +418,41 @@ func (r *Room) Leave(token string, now time.Time) (revealed *State, err error) {
 		return &st, nil
 	}
 	return nil, nil
+}
+
+// React throws a transient reaction to every subscriber. Any participant
+// may react, in any round state — reacting to revealed results is peak
+// peanut gallery. Reactions never enter room state; they are fire-and-
+// forget events.
+func (r *Room) React(token, emoji string, now time.Time) error {
+	if !slices.Contains(Reactions, emoji) {
+		return validationf("reaction must be one of %s", strings.Join(Reactions, " "))
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.closed {
+		return ErrRoomNotFound
+	}
+	r.lastActive = now
+	p, err := r.authLocked(token)
+	if err != nil {
+		return err
+	}
+	if now.Sub(p.lastReaction) < reactionCooldown {
+		return ErrTooFast
+	}
+	p.lastReaction = now
+
+	r.eventSeq++
+	ev := Event{ID: r.eventSeq, Name: "reaction", Reaction: &Reaction{Name: p.name, Kind: p.kind, Emoji: emoji}}
+	for ch := range r.subs {
+		select {
+		case ch <- ev:
+		default:
+		}
+	}
+	return nil
 }
 
 // Snapshot returns the current wire state, redacted while voting.

@@ -33,6 +33,7 @@ State         GET /rooms/{id}
               While voting you get has_voted flags only — never values.
               "results" is null until revealed, then carries votes + stats
               (min/max/median/mean/spread/consensus/counts).
+              Send "Accept: text/plain" for an aligned terminal rendering.
 
 Wait          GET /rooms/{id}/result?timeout=30   Long-poll (max 55s):
               blocks until reveal or timeout, returns room state.
@@ -47,11 +48,16 @@ New round     POST /rooms/{id}/rounds   {"subject"?, "context"?}
 
 Leave         DELETE /rooms/{id}/participants/self
 
+React         POST /rooms/{id}/react   {"emoji":"👏"}   (any participant;
+              one of 👏 🍿 🤔 😮 🎉 ☕; transient SSE "reaction" event,
+              never part of room state; 1/sec per participant)
+
 MCP           /mcp — streamable HTTP MCP server, same operations as tools
               (create_room, join_room, cast_vote, get_room, reveal,
               start_round, wait_for_reveal).
 
 Full schema   /openapi.yaml
+Claude Skill  /skill (SKILL.md teaching this loop)
 
 ## The rules
 

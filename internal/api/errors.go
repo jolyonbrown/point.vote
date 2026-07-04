@@ -29,6 +29,8 @@ func writeError(w http.ResponseWriter, err error) {
 		status, code = http.StatusForbidden, "forbidden"
 	case errors.Is(err, room.ErrServerFull):
 		status, code = http.StatusServiceUnavailable, "server_full"
+	case errors.Is(err, room.ErrTooFast):
+		status, code = http.StatusTooManyRequests, "rate_limited"
 	case errors.Is(err, errTooLarge):
 		status, code = http.StatusRequestEntityTooLarge, "too_large"
 	default:

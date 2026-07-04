@@ -508,6 +508,66 @@ func TestSSEHeartbeat(t *testing.T) {
 	}
 }
 
+func TestReact(t *testing.T) {
+	ts := testServer(t)
+	ip := "10.13.0.1"
+	roomID := createRoom(t, ts, ip, nil)
+	_, token := joinRoom(t, ts, ip, roomID, "Alice", "human")
+
+	// Open the SSE stream first so the reaction event is observable.
+	resp, err := http.Get(ts.URL + "/api/v1/rooms/" + roomID + "/events")
+	if err != nil {
+		t.Fatalf("open SSE: %v", err)
+	}
+	defer resp.Body.Close()
+	events := make(chan sseEvent, 16)
+	go readSSE(t, resp.Body, events)
+	if ev := nextEvent(t, events); ev.name != "state" {
+		t.Fatalf("first event = %q", ev.name)
+	}
+
+	status, body, _ := doJSON(t, "POST", ts.URL+"/api/v1/rooms/"+roomID+"/react", token, ip,
+		map[string]string{"emoji": "🍿"})
+	if status != http.StatusOK || body["accepted"] != true {
+		t.Fatalf("react = %d %v", status, body)
+	}
+
+	ev := nextEvent(t, events)
+	if ev.name != "reaction" {
+		t.Fatalf("event = %q, want reaction", ev.name)
+	}
+	var re map[string]any
+	if err := json.Unmarshal([]byte(ev.data), &re); err != nil {
+		t.Fatalf("reaction payload: %v", err)
+	}
+	if re["emoji"] != "🍿" || re["name"] != "Alice" || re["kind"] != "human" {
+		t.Fatalf("reaction payload = %v", re)
+	}
+	if _, hasState := re["room_id"]; hasState {
+		t.Fatal("reaction payload carries room state")
+	}
+
+	// Throttle: immediate second reaction → 429 rate_limited.
+	status, body, _ = doJSON(t, "POST", ts.URL+"/api/v1/rooms/"+roomID+"/react", token, ip,
+		map[string]string{"emoji": "👏"})
+	if status != http.StatusTooManyRequests {
+		t.Fatalf("rapid react = %d %v, want 429", status, body)
+	}
+	if body["error"].(map[string]any)["code"] != "rate_limited" {
+		t.Fatalf("error = %v", body["error"])
+	}
+
+	// Bad emoji and bad token.
+	if status, _, _ := doJSON(t, "POST", ts.URL+"/api/v1/rooms/"+roomID+"/react", token, ip,
+		map[string]string{"emoji": "💩"}); status != http.StatusBadRequest {
+		t.Fatalf("off-list emoji = %d, want 400", status)
+	}
+	if status, _, _ := doJSON(t, "POST", ts.URL+"/api/v1/rooms/"+roomID+"/react", "bogus", ip,
+		map[string]string{"emoji": "🍿"}); status != http.StatusUnauthorized {
+		t.Fatalf("bad token = %d, want 401", status)
+	}
+}
+
 func TestRateLimit(t *testing.T) {
 	ts := testServer(t)
 	ip := "10.9.0.1"

@@ -108,6 +108,24 @@ echo "$ROUND2" | jq -e '.history[0].votes | length == 2' >/dev/null \
   || fail "history missing votes"
 pass "new round archives history, increments seq"
 
+# --- Stretch: terminal rendering and the peanut gallery --------------------
+
+TEXT=$(curl -s -H "Accept: text/plain" "$API/rooms/$ROOM")
+echo "$TEXT" | grep -q "point.vote · $ROOM" || fail "text rendering missing header"
+echo "$TEXT" | grep -q "round 2 · voting" || fail "text rendering missing round line"
+pass "Accept: text/plain renders the room as text"
+
+curl -s -X POST "$API/rooms/$ROOM/react" \
+  -H "Authorization: Bearer $ALICE_TOKEN" -d '{"emoji":"🍿"}' \
+  | jq -e '.accepted' >/dev/null || fail "reaction rejected"
+CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$API/rooms/$ROOM/react" \
+  -H "Authorization: Bearer $ALICE_TOKEN" -d '{"emoji":"💩"}')
+[ "$CODE" = "400" ] || fail "off-list emoji returned $CODE, want 400"
+pass "peanut gallery reacts (and is kept tasteful)"
+
+curl -sf "$BASE/skill" | grep -q "name: point-vote" || fail "/skill missing"
+pass "/skill serves the Claude Skill"
+
 # --- Errors ----------------------------------------------------------------
 
 CODE=$(curl -s -o /dev/null -w '%{http_code}' "$API/rooms/absent-room-99")
