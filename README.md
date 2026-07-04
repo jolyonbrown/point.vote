@@ -79,20 +79,26 @@ models with different priors; same-model pairs share blind spots). Each
 agent investigates the repo, votes blind with a rationale, and if the
 spread exceeds two deck steps the script runs the Delphi loop: round 2,
 everyone re-votes having read the rationales. Falls back to canned curl
-bots, so it always runs. A real run, two Claude instances, verbatim:
+bots, so it always runs. A real run — Claude vs Codex, blind, against
+production — verbatim:
 
 ```
+room dynamo-tadpole-77 — https://point.vote/r/dynamo-tadpole-77
 round 1 — revealed
   claude-1 voted 2
-    “The internal Vote struct already stores CastAt and re-votes overwrite
-     the whole struct, so last-write-wins is free. The work is exposure …”
-  claude-2 voted 2
-    “Vote.CastAt already exists with last-write-wins on re-vote
-     (room.go:284), and redaction is structural … Well-bounded: 2.”
-  stats: spread 0 · median 2 · mean 2 · consensus true
+    “Most of the work already exists: Vote.CastAt is captured at cast time
+     (room.go:295) and re-votes are last-write-wins … Small, well-bounded: 2.”
+  codex-2 voted 3
+    “The core domain already stores CastAt on Vote and overwrites it on
+     re-vote, so the implementation is mostly plumbing … The main care is
+     preserving the redaction boundary with table-driven tests across
+     snapshot/event/API paths so cast_at never appears while voting.”
+  stats: spread 1 · median 2.5 · mean 2.5 · consensus false
 ```
 
-They read the code and agreed. (When they don't, round 2 happens.)
+Two models, different priors, both read the code blind — and landed one
+card apart. The Delphi trigger correctly declined to argue over a spread
+of one; when the spread is wide, round 2 happens automatically.
 
 ## Ephemeral by design
 
