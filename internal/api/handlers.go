@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -140,6 +141,11 @@ func (s *Server) handleGetRoom(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
+	if wantsPlainText(r) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		fmt.Fprint(w, renderText(st))
+		return
+	}
 	writeJSON(w, http.StatusOK, st)
 }
 
@@ -185,6 +191,21 @@ func (s *Server) handleStartRound(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, st)
+}
+
+func (s *Server) handleReact(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Emoji string `json:"emoji"`
+	}
+	if err := decodeJSON(w, r, &req); err != nil {
+		writeError(w, err)
+		return
+	}
+	if err := s.Svc.React(r.PathValue("id"), bearerToken(r), req.Emoji); err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"accepted": true})
 }
 
 func (s *Server) handleLeave(w http.ResponseWriter, r *http.Request) {
