@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"syscall"
 	"time"
 
@@ -17,6 +18,16 @@ import (
 	"github.com/jolyonbrown/point.vote/internal/mcp"
 	"github.com/jolyonbrown/point.vote/internal/room"
 )
+
+// appVersion is whatever the Go toolchain stamped from the git tag —
+// v1.2.0 on a tagged build, a pseudo-version between tags, "dev" when
+// there is nothing to go on.
+func appVersion() string {
+	if bi, ok := debug.ReadBuildInfo(); ok && bi.Main.Version != "" && bi.Main.Version != "(devel)" {
+		return bi.Main.Version
+	}
+	return "dev"
+}
 
 func main() {
 	addr := flag.String("addr", "127.0.0.1:8080", "listen address")
@@ -31,15 +42,16 @@ func main() {
 	svc := room.NewService(room.NewMemStore(), logger)
 	go svc.RunGC(ctx, room.GCInterval)
 
+	version := appVersion()
 	srv := &http.Server{
 		Addr:              *addr,
-		Handler:           (&api.Server{Log: logger, Svc: svc, MCP: mcp.Handler(svc, logger)}).Handler(),
+		Handler:           (&api.Server{Log: logger, Svc: svc, MCP: mcp.Handler(svc, logger), Version: version}).Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.ListenAndServe() }()
-	logger.Info("listening", "addr", *addr)
+	logger.Info("listening", "addr", *addr, "version", version)
 
 	select {
 	case err := <-errCh:

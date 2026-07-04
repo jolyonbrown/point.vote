@@ -1,16 +1,19 @@
 package api
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/jolyonbrown/point.vote/web"
 )
 
 // mountStatic serves the embedded UI. Pages and assets are read from the
 // embed FS once at startup; they are small and immutable for the life of
-// the process.
-func mountStatic(mux *http.ServeMux) {
+// the process. HTML pages get the {{version}} placeholder substituted so
+// the footer states what is actually running.
+func (s *Server) mountStatic(mux *http.ServeMux) {
 	routes := []struct {
 		pattern     string
 		file        string
@@ -29,6 +32,9 @@ func mountStatic(mux *http.ServeMux) {
 		body, err := web.Files.ReadFile(rt.file)
 		if err != nil {
 			panic(fmt.Sprintf("embedded file %s: %v", rt.file, err))
+		}
+		if strings.HasSuffix(rt.file, ".html") {
+			body = bytes.ReplaceAll(body, []byte("{{version}}"), []byte(s.Version))
 		}
 		contentType, cache := rt.contentType, rt.cache
 		mux.HandleFunc(rt.pattern, func(w http.ResponseWriter, r *http.Request) {
