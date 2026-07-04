@@ -22,6 +22,7 @@ func TestStaticRoutes(t *testing.T) {
 		{"/style.css", "text/css; charset=utf-8", "--accent"},
 		{"/llms.txt", "text/plain; charset=utf-8", "blindness is\nthe point"},
 		{"/openapi.yaml", "application/yaml; charset=utf-8", "openapi: 3.1.0"},
+		{"/skill", "text/markdown; charset=utf-8", "name: point-vote"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.path, func(t *testing.T) {
