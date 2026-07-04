@@ -143,6 +143,19 @@ func (s *Service) Leave(roomID, token string) error {
 	return nil
 }
 
+// React throws a transient peanut-gallery reaction into the room.
+func (s *Service) React(roomID, token, emoji string) error {
+	r, err := s.room(roomID)
+	if err != nil {
+		return err
+	}
+	if err := r.React(token, emoji, s.now()); err != nil {
+		return err
+	}
+	s.log.Info("reaction", "room_id", roomID, "emoji", emoji)
+	return nil
+}
+
 // Subscribe streams room events until cancel is called or the room expires.
 func (s *Service) Subscribe(roomID string) (<-chan Event, func(), error) {
 	r, err := s.room(roomID)

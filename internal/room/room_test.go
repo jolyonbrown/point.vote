@@ -448,6 +448,81 @@ func TestNaNDeckStillSerializes(t *testing.T) {
 	}
 }
 
+func TestReact(t *testing.T) {
+	r := fibRoom(t, false)
+	_, alice := join(t, r, "Alice", KindHuman)
+	_, watcher := join(t, r, "watcher", KindObserver)
+
+	ch, cancel := r.Subscribe()
+	defer cancel()
+
+	t.Run("observer may react", func(t *testing.T) {
+		if err := r.React(watcher, "🍿", t0); err != nil {
+			t.Fatalf("observer react: %v", err)
+		}
+	})
+
+	t.Run("event carries reaction, not state", func(t *testing.T) {
+		var got *Event
+		drainEvents(t, ch, func(ev Event) {
+			if ev.Name == "reaction" {
+				got = &ev
+			}
+		})
+		if got == nil {
+			t.Fatal("no reaction event broadcast")
+		}
+		if got.Reaction == nil || got.Reaction.Emoji != "🍿" || got.Reaction.Name != "watcher" || got.Reaction.Kind != KindObserver {
+			t.Fatalf("reaction = %+v", got.Reaction)
+		}
+		if got.State.RoomID != "" {
+			t.Fatal("reaction event carries state; it must not")
+		}
+	})
+
+	t.Run("throttled to one per second", func(t *testing.T) {
+		if err := r.React(alice, "👏", t0); err != nil {
+			t.Fatalf("first react: %v", err)
+		}
+		if err := r.React(alice, "👏", t0.Add(200*time.Millisecond)); err != ErrTooFast {
+			t.Fatalf("rapid second react error = %v, want ErrTooFast", err)
+		}
+		if err := r.React(alice, "🎉", t0.Add(1100*time.Millisecond)); err != nil {
+			t.Fatalf("react after cooldown: %v", err)
+		}
+	})
+
+	t.Run("VS16 variant accepted", func(t *testing.T) {
+		// ☕️ (U+2615 U+FE0F) from emoji keyboards normalises to bare ☕.
+		if err := r.React(alice, "☕️", t0.Add(30*time.Second)); err != nil {
+			t.Fatalf("VS16 coffee rejected: %v", err)
+		}
+	})
+
+	t.Run("off-list emoji rejected", func(t *testing.T) {
+		var verr ValidationError
+		if err := r.React(alice, "💩", t0.Add(time.Hour)); err == nil || !asValidation(err, &verr) {
+			t.Fatalf("off-list emoji error = %v, want ValidationError", err)
+		}
+	})
+
+	t.Run("bad token", func(t *testing.T) {
+		if err := r.React("bogus", "👏", t0); err != ErrBadToken {
+			t.Fatalf("bad token react error = %v, want ErrBadToken", err)
+		}
+	})
+
+	t.Run("allowed while revealed", func(t *testing.T) {
+		mustVote(t, r, alice, "5", "")
+		if _, err := r.Reveal(alice, t0); err != nil {
+			t.Fatalf("Reveal: %v", err)
+		}
+		if err := r.React(alice, "🎉", t0.Add(2*time.Hour)); err != nil {
+			t.Fatalf("react after reveal: %v", err)
+		}
+	})
+}
+
 func TestSubscribeEventNames(t *testing.T) {
 	r := fibRoom(t, true)
 	_, alice := join(t, r, "Alice", KindHuman)

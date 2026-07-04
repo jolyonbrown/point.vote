@@ -56,14 +56,20 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 			if !open {
 				return // room expired
 			}
-			writeSSE(w, ev.Name, ev.ID, ev.State)
+			if ev.Reaction != nil {
+				writeSSE(w, ev.Name, ev.ID, ev.Reaction)
+			} else {
+				writeSSE(w, ev.Name, ev.ID, ev.State)
+			}
 			fl.Flush()
 		}
 	}
 }
 
-func writeSSE(w io.Writer, name string, id int, st room.State) {
-	data, err := json.Marshal(st)
+// writeSSE emits one event. payload is the full room state for every event
+// except "reaction", whose payload is the transient Reaction itself.
+func writeSSE(w io.Writer, name string, id int, payload any) {
+	data, err := json.Marshal(payload)
 	if err != nil {
 		return
 	}

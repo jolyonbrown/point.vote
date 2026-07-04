@@ -367,6 +367,41 @@ input::placeholder { color: var(--ink-dim); }
 .people .tick.done { color: var(--accent); font-weight: 700; }
 .people .empty { color: var(--ink-dim); font-style: italic; }
 
+/* ---------- peanut gallery ---------- */
+
+.react-bar { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 0.8rem; }
+.react-btn {
+  font: inherit;
+  font-size: 1.05rem;
+  line-height: 1;
+  padding: 0.35rem 0.5rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+.react-btn:hover { transform: translateY(-2px) scale(1.1); }
+
+#react-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 5;
+}
+.react-float {
+  position: absolute;
+  bottom: 10%;
+  font-size: 2rem;
+  animation: gallery 1.7s ease-out forwards;
+}
+@keyframes gallery {
+  0% { opacity: 0; transform: translateY(0) rotate(-8deg) scale(0.7); }
+  15% { opacity: 1; transform: translateY(-8vh) rotate(4deg) scale(1.1); }
+  100% { opacity: 0; transform: translateY(-45vh) rotate(-4deg) scale(1); }
+}
+
 /* ---------- results ---------- */
 
 .results { margin-top: 2rem; }

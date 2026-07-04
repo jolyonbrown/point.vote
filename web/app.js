@@ -7,6 +7,8 @@
   const $ = (sel, el = document) => el.querySelector(sel);
 
   const KIND_GLYPH = { human: "\u{1F464}", agent: "\u{1F916}", observer: "\u{1F441}" };
+  // Mirrors the server's allowlist; the server is the authority.
+  const REACTIONS = ["👏", "🍿", "🤔", "😮", "🎉", "☕"];
 
   let toastTimer;
   function toast(msg) {
@@ -129,6 +131,7 @@
       $("#next-round-row").hidden = !(joined && !voting);
       $("#rationale-row").hidden = !joined || iAmObserver || !voting;
       $("#observer-note").hidden = !iAmObserver;
+      renderReactBar(joined);
 
       renderResults();
       renderHistory();
@@ -199,6 +202,47 @@
         btn.classList.toggle("selected", selected);
         btn.setAttribute("aria-checked", String(selected));
       }
+    }
+
+    let reactBarBuilt = false;
+    function renderReactBar(joined) {
+      const bar = $("#react-bar");
+      bar.hidden = !joined;
+      if (reactBarBuilt || !joined) return;
+      reactBarBuilt = true;
+      for (const emoji of REACTIONS) {
+        const btn = document.createElement("button");
+        btn.className = "react-btn";
+        btn.type = "button";
+        btn.textContent = emoji;
+        btn.title = "react " + emoji;
+        btn.addEventListener("click", async () => {
+          try {
+            await api("POST", base + "/react", { emoji }, token);
+          } catch (err) {
+            if (err.status === 429) toast("Steady on.");
+            else if (err.status === 401) forgetIdentity();
+          }
+        });
+        bar.append(btn);
+      }
+    }
+
+    // A reaction floats up from the gallery and is gone. Nothing to
+    // re-render; it was never state. Background tabs throttle timers and
+    // pause animations, so removal is belt (animationend), braces
+    // (timeout) and a hard cap pruning the oldest floats.
+    function floatReaction(re) {
+      const overlay = $("#react-overlay");
+      while (overlay.children.length >= 8) overlay.firstChild.remove();
+      const el = document.createElement("span");
+      el.className = "react-float";
+      el.textContent = re.emoji;
+      el.title = re.name;
+      el.style.left = 35 + Math.random() * 30 + "%";
+      el.addEventListener("animationend", () => el.remove());
+      overlay.append(el);
+      setTimeout(() => el.remove(), 2500);
     }
 
     function statChip(label, value, cls) {
@@ -417,6 +461,7 @@
       for (const name of ["state", "joined", "left", "voted", "revealed", "round_started"]) {
         es.addEventListener(name, onEvent);
       }
+      es.addEventListener("reaction", (e) => floatReaction(JSON.parse(e.data)));
       es.onopen = () => {
         backoff = 1000;
         setLive(true);

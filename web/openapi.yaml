@@ -198,6 +198,10 @@ paths:
   /api/v1/rooms/{id}:
     get:
       summary: Room state (redacted while voting)
+      description: >
+        Content-negotiated: the default is JSON; an Accept header
+        containing text/plain returns the same (equally redacted) state as
+        an aligned terminal table.
       parameters:
         - { name: id, in: path, required: true, schema: { type: string } }
       responses:
@@ -206,6 +210,8 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/State" }
+            text/plain:
+              schema: { type: string }
         "404": { $ref: "#/components/responses/NotFound" }
   /api/v1/rooms/{id}/participants:
     post:
@@ -331,6 +337,45 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
+  /api/v1/rooms/{id}/react:
+    post:
+      summary: Throw a peanut-gallery reaction
+      description: >
+        Any participant, any round state. Transient: broadcast as an SSE
+        "reaction" event ({"name","kind","emoji"}) and never part of room
+        state. Throttled to one per second per participant.
+      security: [{ participantToken: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [emoji]
+              properties:
+                emoji:
+                  type: string
+                  enum: ["👏", "🍿", "🤔", "😮", "🎉", "☕"]
+      responses:
+        "200":
+          description: Thrown
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accepted]
+                properties:
+                  accepted: { type: boolean, const: true }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/BadToken" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429":
+          description: One reaction per second (code rate_limited)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
   /api/v1/rooms/{id}/participants/self:
     delete:
       summary: Leave the room
@@ -372,7 +417,9 @@ paths:
         Named events: state (initial snapshot, also sent on reconnect),
         joined, left, voted, revealed, round_started. Every event's data
         payload is the full redacted room state — snapshots, not diffs.
-        Heartbeat comment every 25s.
+        The one exception: transient "reaction" events carry
+        {"name","kind","emoji"} instead of state. Heartbeat comment
+        every 25s.
       parameters:
         - { name: id, in: path, required: true, schema: { type: string } }
       responses:
