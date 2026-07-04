@@ -30,7 +30,17 @@ func Handler(svc *room.Service, log *slog.Logger) http.Handler {
 		// A server per request is cheap (seven AddTool calls) and lets
 		// create_room mint web URLs for the origin the caller actually used.
 		return newServer(svc, originFrom(r), log)
-	}, &sdk.StreamableHTTPOptions{Stateless: true})
+	}, &sdk.StreamableHTTPOptions{
+		Stateless: true,
+		// The SDK's DNS-rebinding protection 403s loopback-received
+		// requests whose Host isn't localhost — which is exactly how
+		// production traffic arrives (cloudflared → 127.0.0.1 with
+		// Host: point.vote). The protection defends local servers with
+		// privileged access; this endpoint is deliberately public and
+		// unauthenticated, so a rebinding page gains nothing it couldn't
+		// get by calling point.vote directly.
+		DisableLocalhostProtection: true,
+	})
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
 		inner.ServeHTTP(w, r)
