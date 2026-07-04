@@ -194,6 +194,22 @@ func (s *Server) handleStartRound(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, st)
 }
 
+func (s *Server) handleSettle(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Value string `json:"value"`
+	}
+	if err := decodeJSON(w, r, &req); err != nil {
+		writeError(w, err)
+		return
+	}
+	st, err := s.Svc.Settle(r.PathValue("id"), bearerToken(r), req.Value)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, st)
+}
+
 func (s *Server) handleReact(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Emoji string `json:"emoji"`

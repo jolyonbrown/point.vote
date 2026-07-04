@@ -1,5 +1,7 @@
 package room
 
+import "time"
+
 // Wire types: the JSON room state served by GET /api/v1/rooms/{id}, the SSE
 // stream, and the long-poll — one shape for every read path (PLAN.md §4).
 
@@ -11,6 +13,7 @@ type State struct {
 	Round      RoundState     `json:"round"`
 	Results    *Results       `json:"results"` // null until the round is revealed
 	History    []RoundSummary `json:"history"`
+	Settled    *Settlement    `json:"settled"` // null until someone calls it
 }
 
 // RoundState describes the current round without vote contents.
@@ -58,6 +61,16 @@ type Stats struct {
 	Spread    *float64       `json:"spread"`
 	Consensus bool           `json:"consensus"`
 	Counts    map[string]int `json:"counts"`
+	Top       *Top           `json:"top"` // null when nobody voted
+}
+
+// Top is the modal value(s): the natural result for decision decks and a
+// diagnostic for numeric ones. Ties are plural and honest — a tied
+// decision is "argue and re-vote" territory, not a coin flip.
+type Top struct {
+	Values []string `json:"values"` // in deck order
+	Count  int      `json:"count"`
+	Tied   bool     `json:"tied"`
 }
 
 // RoundSummary is an archived round in the session-only history ring.
@@ -66,6 +79,30 @@ type RoundSummary struct {
 	Subject string         `json:"subject"`
 	Votes   []RevealedVote `json:"votes"`
 	Stats   Stats          `json:"stats"`
+}
+
+// Settlement records the deliberation's outcome: the value the room
+// settled on, who called it, and the awards computed at that moment. In
+// RAM like everything else; it evaporates with the room.
+//
+// Immutable once published: snapshots share the pointer (the same
+// pattern as Results and history entries), and re-settling replaces the
+// whole Settlement rather than mutating it.
+type Settlement struct {
+	Value     string    `json:"value"`
+	By        string    `json:"by"`
+	SettledAt time.Time `json:"settled_at"`
+	Awards    []Award   `json:"awards"`
+}
+
+// Award is ephemeral end-of-session confetti. Every award is anchored to
+// blind votes measured against the settled value — rewarding independent
+// judgement, never herding.
+type Award struct {
+	ID     string   `json:"id"`
+	Title  string   `json:"title"`
+	Names  []string `json:"names"`
+	Detail string   `json:"detail"`
 }
 
 // Event is a room change notification: joined, left, voted, revealed or

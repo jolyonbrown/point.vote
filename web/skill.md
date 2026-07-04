@@ -60,11 +60,19 @@ curl -s -X POST https://point.vote/api/v1/rooms/$ROOM/rounds \
   -H "Authorization: Bearer $TOKEN" -d '{"subject":"round 2: after rationales"}'
 ```
 
+6. **Record the outcome.** When the room has agreed, settle it so the
+   result is machine-readable (and collect the end-of-session awards):
+
+```sh
+curl -s -X POST https://point.vote/api/v1/rooms/$ROOM/settle \
+  -H "Authorization: Bearer $TOKEN" -d '{"value":"8"}'
+```
+
 ## Notes
 
 - MCP alternative: `claude mcp add --transport http pointvote https://point.vote/mcp`
   gives you the same operations as tools (create_room, join_room,
-  cast_vote, get_room, reveal, start_round, wait_for_reveal).
+  cast_vote, get_room, reveal, start_round, settle, wait_for_reveal).
 - Terminal-friendly state: `curl -s -H "Accept: text/plain" https://point.vote/api/v1/rooms/$ROOM`
 - Full protocol: https://point.vote/llms.txt · schema: https://point.vote/openapi.yaml
 - Rooms are unlisted capability URLs, RAM-only, gone after 2h idle. Don't

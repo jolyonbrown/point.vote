@@ -133,7 +133,7 @@ func TestInstructionsAndToolList(t *testing.T) {
 	want := map[string]bool{
 		"create_room": false, "join_room": false, "cast_vote": false,
 		"get_room": false, "reveal": false, "start_round": false,
-		"wait_for_reveal": false,
+		"settle": false, "wait_for_reveal": false,
 	}
 	for _, tool := range tools.Tools {
 		if _, ok := want[tool.Name]; ok {
@@ -262,6 +262,16 @@ func TestManualRevealAndWaitTimeout(t *testing.T) {
 	call(t, cs, "reveal", map[string]any{"room_id": created.RoomID, "token": p.Token}, &revealed)
 	if revealed.Results == nil {
 		t.Fatal("manual reveal returned no results")
+	}
+
+	// Settle over MCP: the orchestrator records the outcome.
+	var settled room.State
+	call(t, cs, "settle", map[string]any{"room_id": created.RoomID, "token": p.Token, "value": "5"}, &settled)
+	if settled.Settled == nil || settled.Settled.Value != "5" {
+		t.Fatalf("settled = %+v", settled.Settled)
+	}
+	if len(settled.Settled.Awards) != 1 || settled.Settled.Awards[0].ID != "oracle" {
+		t.Fatalf("sole exact voter should get oracle only: %+v", settled.Settled.Awards)
 	}
 }
 

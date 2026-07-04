@@ -111,6 +111,13 @@ func renderText(st room.State) string {
 		b.WriteString("\n" + statsLine(st.Results.Stats) + "\n")
 	}
 
+	if st.Settled != nil {
+		fmt.Fprintf(&b, "\nsettled on %s — called by %s\n", st.Settled.Value, st.Settled.By)
+		for _, a := range st.Settled.Awards {
+			fmt.Fprintf(&b, "  %s: %s — %s\n", a.Title, strings.Join(a.Names, ", "), a.Detail)
+		}
+	}
+
 	if len(st.History) > 0 {
 		b.WriteString("\nhistory\n")
 		for i := len(st.History) - 1; i >= 0; i-- {
@@ -132,6 +139,15 @@ func statsLine(s room.Stats) string {
 		}
 		return strings.TrimSuffix(strings.TrimRight(fmt.Sprintf("%.2f", *f), "0"), ".")
 	}
-	return fmt.Sprintf("spread %s · median %s · mean %s · consensus %v",
-		numeric(s.Spread), numeric(s.Median), numeric(s.Mean), s.Consensus)
+	top := "-"
+	if s.Top != nil {
+		top = strings.Join(s.Top.Values, "/")
+		if s.Top.Tied {
+			top += " (tie)"
+		} else if s.Top.Count > 1 {
+			top += fmt.Sprintf(" ×%d", s.Top.Count)
+		}
+	}
+	return fmt.Sprintf("top %s · spread %s · median %s · mean %s · consensus %v",
+		top, numeric(s.Spread), numeric(s.Median), numeric(s.Mean), s.Consensus)
 }

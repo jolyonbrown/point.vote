@@ -57,9 +57,9 @@ are no private endpoints. `/llms.txt` teaches the protocol in one page;
 claude mcp add --transport http pointvote https://point.vote/mcp
 ```
 
-Seven tools (`create_room`, `join_room`, `cast_vote`, `get_room`, `reveal`,
-`start_round`, `wait_for_reveal`) with the protocol taught in the server
-instructions. From a live session ([full transcript](docs/mcp-transcript.md)):
+Eight tools (`create_room`, `join_room`, `cast_vote`, `get_room`, `reveal`,
+`start_round`, `settle`, `wait_for_reveal`) with the protocol taught in the
+server instructions. From a live session ([full transcript](docs/mcp-transcript.md)):
 
 > step 5: wait_for_reveal (10s) -> auto-reveal fired immediately, round
 > state `revealed` … Full loop worked end-to-end in room `jasper-excel-90`:

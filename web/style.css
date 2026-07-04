@@ -452,6 +452,26 @@ input::placeholder { color: var(--ink-dim); }
   to { opacity: 1; transform: none; }
 }
 
+/* ---------- the verdict ---------- */
+
+.settlement { margin-top: 2rem; }
+.settle-controls { display: flex; gap: 0.6rem; align-items: center; }
+#settled-line { font-family: var(--mono); margin: 0 0 0.8rem; }
+#awards { display: grid; gap: 0.5rem; }
+.award {
+  display: flex;
+  gap: 0.7rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+  border: 1px solid var(--line);
+  background: var(--bg-raise);
+  border-radius: 10px;
+  padding: 0.6rem 0.9rem;
+}
+.award-title { font-family: var(--mono); font-weight: 700; color: var(--accent); }
+.award-who { font-weight: 600; }
+.award-detail { color: var(--ink-dim); font-size: 0.85rem; }
+
 /* ---------- history ---------- */
 
 .history { margin-top: 2rem; }

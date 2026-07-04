@@ -132,8 +132,10 @@
       $("#rationale-row").hidden = !joined || iAmObserver || !voting;
       $("#observer-note").hidden = !iAmObserver;
       renderReactBar(joined);
+      renderSettleControls(joined, voting);
 
       renderResults();
+      renderSettlement();
       renderHistory();
     }
 
@@ -201,6 +203,56 @@
         const selected = voting && btn.dataset.v === myVote;
         btn.classList.toggle("selected", selected);
         btn.setAttribute("aria-checked", String(selected));
+      }
+    }
+
+    let settleBuilt = false;
+    function renderSettleControls(joined, voting) {
+      const row = $("#settle-row");
+      row.hidden = !(joined && !voting);
+      if (row.hidden) return;
+      const select = $("#settle-value");
+      if (!settleBuilt) {
+        settleBuilt = true;
+        for (const value of state.deck) {
+          const opt = document.createElement("option");
+          opt.value = value;
+          opt.textContent = value;
+          select.append(opt);
+        }
+        select.dataset.touched = "";
+        select.addEventListener("change", () => (select.dataset.touched = "1"));
+      }
+      // Suggest the top card until the user has an opinion of their own.
+      const top = state.results?.stats?.top;
+      if (!select.dataset.touched && top && !top.tied) {
+        select.value = top.values[0];
+      }
+    }
+
+    function renderSettlement() {
+      const box = $("#settlement");
+      const s = state.settled;
+      box.hidden = !s;
+      if (!s) return;
+      $("#settled-line").textContent =
+        "Settled on " + s.value + " — called by " + s.by + ".";
+      const awards = $("#awards");
+      awards.textContent = "";
+      for (const a of s.awards) {
+        const div = document.createElement("div");
+        div.className = "award";
+        const title = document.createElement("span");
+        title.className = "award-title";
+        title.textContent = a.title;
+        const who = document.createElement("span");
+        who.className = "award-who";
+        who.textContent = a.names.join(", ");
+        const detail = document.createElement("span");
+        detail.className = "award-detail";
+        detail.textContent = a.detail;
+        div.append(title, who, detail);
+        awards.append(div);
       }
     }
 
@@ -369,6 +421,16 @@
       }
     });
 
+    $("#settle").addEventListener("click", async () => {
+      try {
+        await api("POST", base + "/settle", { value: $("#settle-value").value }, token);
+      } catch (err) {
+        if (err.status === 409) toast("Reveal the round first.");
+        else if (err.status === 401) forgetIdentity();
+        else toast("Couldn't settle: " + err.message);
+      }
+    });
+
     $("#next-round").addEventListener("click", async () => {
       const body = {};
       const subject = $("#next-subject").value.trim();
@@ -458,7 +520,7 @@
         }
         render();
       };
-      for (const name of ["state", "joined", "left", "voted", "revealed", "round_started"]) {
+      for (const name of ["state", "joined", "left", "voted", "revealed", "round_started", "settled"]) {
         es.addEventListener(name, onEvent);
       }
       es.addEventListener("reaction", (e) => floatReaction(JSON.parse(e.data)));

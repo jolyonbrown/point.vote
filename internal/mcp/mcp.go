@@ -106,6 +106,12 @@ type startRoundArgs struct {
 	Context string `json:"context,omitempty"`
 }
 
+type settleArgs struct {
+	RoomID string `json:"room_id"`
+	Token  string `json:"token"`
+	Value  string `json:"value" jsonschema:"the deck value the room agreed on"`
+}
+
 type waitForRevealArgs struct {
 	RoomID   string `json:"room_id"`
 	TimeoutS *int   `json:"timeout_s,omitempty" jsonschema:"seconds to wait: default 30, max 55, 0 returns current state immediately"`
@@ -196,6 +202,17 @@ func newServer(svc *room.Service, origin string, log *slog.Logger) *sdk.Server {
 		Description: "Archive the revealed round and open the next one — the re-vote half of the Delphi loop.",
 	}, func(ctx context.Context, req *sdk.CallToolRequest, a startRoundArgs) (*sdk.CallToolResult, any, error) {
 		st, err := svc.StartRound(a.RoomID, a.Token, a.Subject, a.Context)
+		if err != nil {
+			return nil, nil, err
+		}
+		return nil, st, nil
+	})
+
+	sdk.AddTool(s, &sdk.Tool{
+		Name:        "settle",
+		Description: "Record the value the room agreed on after discussion. Requires the current round to be revealed; settling again overwrites. Returns state including end-of-session awards.",
+	}, func(ctx context.Context, req *sdk.CallToolRequest, a settleArgs) (*sdk.CallToolResult, any, error) {
+		st, err := svc.Settle(a.RoomID, a.Token, a.Value)
 		if err != nil {
 			return nil, nil, err
 		}
