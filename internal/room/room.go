@@ -425,6 +425,9 @@ func (r *Room) Leave(token string, now time.Time) (revealed *State, err error) {
 // peanut gallery. Reactions never enter room state; they are fire-and-
 // forget events.
 func (r *Room) React(token, emoji string, now time.Time) error {
+	// Emoji keyboards often append VS16 (U+FE0F); normalise so ☕️ and ☕
+	// are the same coffee.
+	emoji = strings.ReplaceAll(emoji, "️", "")
 	if !slices.Contains(Reactions, emoji) {
 		return validationf("reaction must be one of %s", strings.Join(Reactions, " "))
 	}
@@ -443,15 +446,7 @@ func (r *Room) React(token, emoji string, now time.Time) error {
 		return ErrTooFast
 	}
 	p.lastReaction = now
-
-	r.eventSeq++
-	ev := Event{ID: r.eventSeq, Name: "reaction", Reaction: &Reaction{Name: p.name, Kind: p.kind, Emoji: emoji}}
-	for ch := range r.subs {
-		select {
-		case ch <- ev:
-		default:
-		}
-	}
+	r.fanoutLocked(Event{Name: "reaction", Reaction: &Reaction{Name: p.name, Kind: p.kind, Emoji: emoji}})
 	return nil
 }
 
@@ -502,8 +497,10 @@ func (r *Room) sortedParticipantsLocked() []*Participant {
 }
 
 // subBuffer sizes subscriber channels. Sends are non-blocking: a slow
-// consumer just misses a snapshot; the next event carries full state again.
-const subBuffer = 8
+// consumer just misses a snapshot; the next event carries full state
+// again. Sized with headroom for reactions, which share the channel and
+// raise pressure without carrying state.
+const subBuffer = 16
 
 // Subscribe registers for room events. The channel closes when the room
 // expires. Call cancel when done.
@@ -545,8 +542,14 @@ func (r *Room) broadcastLocked(name string) {
 	if r.closed {
 		return
 	}
+	r.fanoutLocked(Event{Name: name, State: r.snapshotLocked()})
+}
+
+// fanoutLocked stamps the event ID and delivers to every subscriber,
+// dropping rather than blocking on the slow ones.
+func (r *Room) fanoutLocked(ev Event) {
 	r.eventSeq++
-	ev := Event{ID: r.eventSeq, Name: name, State: r.snapshotLocked()}
+	ev.ID = r.eventSeq
 	for ch := range r.subs {
 		select {
 		case ch <- ev:

@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -10,10 +11,25 @@ import (
 )
 
 // wantsPlainText reports whether the caller asked for the terminal-dweller
-// rendering. Browsers never put text/plain in their default Accept, so the
-// web UI is unaffected.
+// rendering: an Accept media range of exactly text/plain with a non-zero
+// q. Browsers never put text/plain in their default Accept, so the web UI
+// is unaffected, and an explicit text/plain;q=0 rejection is honoured.
 func wantsPlainText(r *http.Request) bool {
-	return strings.Contains(r.Header.Get("Accept"), "text/plain")
+	for _, part := range strings.Split(r.Header.Get("Accept"), ",") {
+		fields := strings.Split(part, ";")
+		if strings.TrimSpace(fields[0]) != "text/plain" {
+			continue
+		}
+		for _, param := range fields[1:] {
+			if k, v, ok := strings.Cut(strings.TrimSpace(param), "="); ok && strings.TrimSpace(k) == "q" {
+				if q, err := strconv.ParseFloat(strings.TrimSpace(v), 64); err == nil && q == 0 {
+					return false
+				}
+			}
+		}
+		return true
+	}
+	return false
 }
 
 // renderText draws the room state as an aligned plain-text table. It

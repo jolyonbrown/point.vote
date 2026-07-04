@@ -141,6 +141,7 @@ func (s *Server) handleGetRoom(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
+	w.Header().Set("Vary", "Accept")
 	if wantsPlainText(r) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		fmt.Fprint(w, renderText(st))

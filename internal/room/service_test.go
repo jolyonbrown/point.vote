@@ -1,6 +1,7 @@
 package room
 
 import (
+	"context"
 	"log/slog"
 	"testing"
 	"time"
@@ -105,6 +106,50 @@ func TestServiceActivityDefersExpiry(t *testing.T) {
 		if _, err := svc.State(st.RoomID); err != nil {
 			t.Fatalf("active room expired on touch %d: %v", i, err)
 		}
+	}
+}
+
+// TestWaitForRevealIgnoresReactions pins that the state-less reaction
+// events flowing through the same subscriber channel neither satisfy nor
+// wedge a pending wait.
+func TestWaitForRevealIgnoresReactions(t *testing.T) {
+	svc := NewService(NewMemStore(), slog.New(slog.DiscardHandler))
+	st := createFib(t, svc)
+	_, token, err := svc.Join(st.RoomID, "solo", KindHuman)
+	if err != nil {
+		t.Fatalf("Join: %v", err)
+	}
+
+	done := make(chan State, 1)
+	go func() {
+		out, err := svc.WaitForReveal(context.Background(), st.RoomID, 5*time.Second)
+		if err != nil {
+			t.Errorf("WaitForReveal: %v", err)
+		}
+		done <- out
+	}()
+
+	time.Sleep(100 * time.Millisecond) // let the waiter subscribe
+	if err := svc.React(st.RoomID, token, "🍿"); err != nil {
+		t.Fatalf("React: %v", err)
+	}
+	select {
+	case out := <-done:
+		t.Fatalf("WaitForReveal returned on a reaction: state=%q", out.Round.State)
+	case <-time.After(400 * time.Millisecond):
+		// still waiting — correct
+	}
+
+	if _, err := svc.Reveal(st.RoomID, token); err != nil {
+		t.Fatalf("Reveal: %v", err)
+	}
+	select {
+	case out := <-done:
+		if out.Round.State != StateRevealed {
+			t.Fatalf("state = %q, want revealed", out.Round.State)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("WaitForReveal did not return after reveal")
 	}
 }
 

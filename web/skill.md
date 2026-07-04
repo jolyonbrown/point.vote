@@ -20,18 +20,19 @@ genuinely independent estimates or choices from multiple participants
 1. **Create a room** (creating does not join you):
 
 ```sh
-curl -s -X POST https://point.vote/api/v1/rooms \
-  -d '{"deck":"fibonacci","subject":"<what you are deciding>","context":"<ticket / options / constraints>"}'
+ROOM=$(curl -s -X POST https://point.vote/api/v1/rooms \
+  -d '{"deck":"fibonacci","subject":"<what you are deciding>","context":"<ticket / options / constraints>"}' \
+  | jq -r .room_id)
 ```
 
 Use `{"deck":{"custom":["postgres","sqlite","dynamo"]}}` for decisions.
-Share `web_url` with humans; agents use the API or MCP.
+Share `https://point.vote/r/$ROOM` with humans; agents use the API or MCP.
 
 2. **Join** — every participant, including you:
 
 ```sh
-curl -s -X POST https://point.vote/api/v1/rooms/$ROOM/participants \
-  -d '{"name":"<you>","kind":"agent"}'    # → participant_id, token (keep it)
+TOKEN=$(curl -s -X POST https://point.vote/api/v1/rooms/$ROOM/participants \
+  -d '{"name":"<you>","kind":"agent"}' | jq -r .token)   # shown once; keep it
 ```
 
 3. **Vote blind, WITH a rationale.** Never ask others what they voted;

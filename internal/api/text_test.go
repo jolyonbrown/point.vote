@@ -21,6 +21,31 @@ func getText(t *testing.T, url string) (string, string) {
 	return string(body), resp.Header.Get("Content-Type")
 }
 
+func TestWantsPlainText(t *testing.T) {
+	tests := []struct {
+		accept string
+		want   bool
+	}{
+		{"text/plain", true},
+		{"application/json, text/plain", true},
+		{"text/plain; q=0.5", true},
+		{"application/json, text/plain;q=0", false}, // explicit rejection
+		{"text/plainish", false},                    // not a media-type match
+		{"application/json; note=text/plain", false},
+		{"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", false}, // browser default
+		{"", false},
+	}
+	for _, tt := range tests {
+		r, _ := http.NewRequest("GET", "/", nil)
+		if tt.accept != "" {
+			r.Header.Set("Accept", tt.accept)
+		}
+		if got := wantsPlainText(r); got != tt.want {
+			t.Errorf("wantsPlainText(%q) = %v, want %v", tt.accept, got, tt.want)
+		}
+	}
+}
+
 func TestPlainTextRoom(t *testing.T) {
 	const canary = "TEXT-PATH-CANARY"
 	ts := testServer(t)

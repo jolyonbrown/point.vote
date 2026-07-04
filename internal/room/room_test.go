@@ -492,6 +492,13 @@ func TestReact(t *testing.T) {
 		}
 	})
 
+	t.Run("VS16 variant accepted", func(t *testing.T) {
+		// ☕️ (U+2615 U+FE0F) from emoji keyboards normalises to bare ☕.
+		if err := r.React(alice, "☕️", t0.Add(30*time.Second)); err != nil {
+			t.Fatalf("VS16 coffee rejected: %v", err)
+		}
+	})
+
 	t.Run("off-list emoji rejected", func(t *testing.T) {
 		var verr ValidationError
 		if err := r.React(alice, "💩", t0.Add(time.Hour)); err == nil || !asValidation(err, &verr) {
