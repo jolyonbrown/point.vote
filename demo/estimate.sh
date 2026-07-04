@@ -5,6 +5,9 @@
 #
 #   make demo            # or: demo/estimate.sh
 #   DEMO_AGENTS="bot bot" demo/estimate.sh   # force the canned-bot path
+#   POINTVOTE_URL=https://point.vote demo/estimate.sh   # against a live server
+#   DEMO_CODEX_FLAGS=...  # override codex sandbox flags (e.g. bypass inside
+#                         # an already-sandboxed container/CI)
 #
 # Agent preference: claude + codex (two models, different priors — same-model
 # pairs share blind spots), else two claude instances, else two canned curl
@@ -127,8 +130,8 @@ launch_agent() { # $1 kind, $2 name, $3 token, $4 extra → runs in background
         "$(agent_prompt "$name" "$token" "$extra")" >"$log" 2>&1 &
       ;;
     codex)
-      codex exec -s workspace-write \
-        -c 'sandbox_workspace_write={"network_access":true}' \
+      # shellcheck disable=SC2086  # DEMO_CODEX_FLAGS is deliberately split
+      codex exec ${DEMO_CODEX_FLAGS:--s workspace-write -c sandbox_workspace_write.network_access=true} \
         "$(agent_prompt "$name" "$token" "$extra")" >"$log" 2>&1 &
       ;;
     bot)
