@@ -63,6 +63,15 @@ func TestStaticRoutes(t *testing.T) {
 				t.Fatalf("%s: footer missing %q", path, want)
 			}
 		}
+		// Cache busting: assets referenced with the version query so a
+		// deploy invalidates browser caches (Cloudflare rewrites our
+		// max-age for static extensions; HTML is never cached, so the
+		// changed URL is what actually reaches browsers).
+		for _, want := range []string{"/app.js?v=vTEST", "/style.css?v=vTEST"} {
+			if !strings.Contains(string(body), want) {
+				t.Fatalf("%s: missing cache-busted asset ref %q", path, want)
+			}
+		}
 	}
 
 	// The root pattern must be exact: unknown paths still 404.
