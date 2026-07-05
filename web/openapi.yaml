@@ -171,6 +171,12 @@ components:
           type: array
           items: { $ref: "#/components/schemas/RevealedVote" }
         stats: { $ref: "#/components/schemas/Stats" }
+        called:
+          type: string
+          description: >
+            present when this round concluded a settled deliberation —
+            the settlement is archived here (and cleared from the live
+            room) when the next round starts
   responses:
     NotFound:
       description: No such room

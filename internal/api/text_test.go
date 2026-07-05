@@ -110,4 +110,17 @@ func TestPlainTextRoom(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("archived call shows in history", func(t *testing.T) {
+		if status, _, _ := doJSON(t, "POST", ts.URL+"/api/v1/rooms/"+roomID+"/rounds", alice, ip, nil); status != http.StatusCreated {
+			t.Fatalf("new round = %d", status)
+		}
+		body, _ := getText(t, url)
+		if strings.Contains(body, "settled on 8") {
+			t.Fatalf("live verdict should clear on new round:\n%s", body)
+		}
+		if !strings.Contains(body, "· called 8") {
+			t.Fatalf("history line missing archived call:\n%s", body)
+		}
+	})
 }

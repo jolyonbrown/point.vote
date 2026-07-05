@@ -52,7 +52,9 @@ Settle        POST /rooms/{id}/settle   {"value": "<deck member>"}
               calling again overwrites). State gains "settled":
               {value, by, settled_at, awards} — awards are ephemeral
               end-of-session fun anchored to blind first votes, and the
-              SSE stream emits a "settled" event.
+              SSE stream emits a "settled" event. Starting the next
+              round archives the call onto that round's history entry
+              ("called") and clears the live settlement.
 
 Leave         DELETE /rooms/{id}/participants/self
 

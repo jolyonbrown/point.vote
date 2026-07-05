@@ -130,11 +130,19 @@ echo "$SETTLED" | jq -e '.results.stats.top.values == ["8"] and .results.stats.t
   || fail "top wrong after unanimous round: $(echo "$SETTLED" | jq -c .results.stats.top)"
 pass "settled on 8; awards handed out; top computed"
 
+ROUND3=$(curl -s -X POST "$API/rooms/$ROOM/rounds" \
+  -H "Authorization: Bearer $ALICE_TOKEN" -d '{"subject":"round three"}')
+echo "$ROUND3" | jq -e '.settled == null' >/dev/null \
+  || fail "live settlement not cleared by new round"
+echo "$ROUND3" | jq -e '.history[-1].called == "8"' >/dev/null \
+  || fail "archived round missing called value: $(echo "$ROUND3" | jq -c '.history[-1]')"
+pass "call archived onto the concluded round's history entry"
+
 # --- Stretch: terminal rendering and the peanut gallery --------------------
 
 TEXT=$(curl -s -H "Accept: text/plain" "$API/rooms/$ROOM")
 echo "$TEXT" | grep -q "point.vote · $ROOM" || fail "text rendering missing header"
-echo "$TEXT" | grep -q "settled on 8 — called by Alice" || fail "text rendering missing verdict"
+echo "$TEXT" | grep -q "· called 8" || fail "text rendering missing archived call"
 pass "Accept: text/plain renders the room as text"
 
 curl -s -X POST "$API/rooms/$ROOM/react" \

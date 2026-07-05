@@ -269,7 +269,7 @@ func TestSettle(t *testing.T) {
 		}
 	})
 
-	t.Run("settlement survives into later snapshots", func(t *testing.T) {
+	t.Run("settlement archives onto the concluded round", func(t *testing.T) {
 		r := fibRoom(t, false)
 		_, alice := join(t, r, "Alice", KindHuman)
 		mustVote(t, r, alice, "5", "")
@@ -283,8 +283,26 @@ func TestSettle(t *testing.T) {
 			t.Fatalf("StartRound: %v", err)
 		}
 		st := r.Snapshot(t0)
-		if st.Settled == nil || st.Settled.Value != "5" {
-			t.Fatalf("settlement lost after new round: %+v", st.Settled)
+		if st.Settled != nil {
+			t.Fatalf("live settlement should clear when the next round starts: %+v", st.Settled)
+		}
+		if len(st.History) != 1 || st.History[0].Called != "5" {
+			t.Fatalf("history[0].Called = %+v, want \"5\"", st.History)
+		}
+	})
+
+	t.Run("unsettled rounds archive without a call", func(t *testing.T) {
+		r := fibRoom(t, false)
+		_, alice := join(t, r, "Alice", KindHuman)
+		mustVote(t, r, alice, "5", "")
+		if _, err := r.Reveal(alice, t0); err != nil {
+			t.Fatalf("Reveal: %v", err)
+		}
+		if _, err := r.StartRound(alice, "", "", t0); err != nil {
+			t.Fatalf("StartRound: %v", err)
+		}
+		if st := r.Snapshot(t0); st.History[0].Called != "" {
+			t.Fatalf("history[0].Called = %q, want empty", st.History[0].Called)
 		}
 	})
 }
