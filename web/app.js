@@ -120,8 +120,7 @@
       h1.textContent = r.subject || "No subject. Vibes only.";
       h1.classList.toggle("untitled", !r.subject);
 
-      $("#context-box").hidden = !r.context;
-      if (r.context) $("#context").textContent = r.context;
+      renderContext(r, voting);
 
       renderParticipants(r);
       renderStatus(r, voting);
@@ -183,18 +182,38 @@
       $("#status").textContent = text;
     }
 
+    // Poker cards suit short values; a deck of long decision strings reads
+    // as a list. Count code points, not bytes, so "☕" is one character.
+    const CARD_MAX_LEN = 4;
+    function deckAsCards() {
+      return state.deck.every((v) => [...v].length <= CARD_MAX_LEN);
+    }
+
     function renderCards(voting, iAmObserver, joined) {
       const wrap = $("#cards");
       if (!deckDrawn) {
-        for (const value of state.deck) {
+        const asCards = deckAsCards();
+        wrap.classList.toggle("as-list", !asCards);
+        state.deck.forEach((value, i) => {
           const btn = document.createElement("button");
-          btn.className = "card";
           btn.dataset.v = value;
-          btn.textContent = value;
           btn.setAttribute("role", "radio");
           btn.addEventListener("click", () => castVote(value));
+          if (asCards) {
+            btn.className = "card"; // corner pips come from CSS attr(data-v)
+            btn.textContent = value;
+          } else {
+            btn.className = "deck-row";
+            const key = document.createElement("span");
+            key.className = "rowkey";
+            key.textContent = String(i + 1);
+            const label = document.createElement("span");
+            label.className = "rowlabel";
+            label.textContent = value;
+            btn.append(key, label);
+          }
           wrap.append(btn);
-        }
+        });
         deckDrawn = true;
       }
       const myVote = sessionStorage.getItem(myVoteKey());
@@ -203,6 +222,22 @@
         const selected = voting && btn.dataset.v === myVote;
         btn.classList.toggle("selected", selected);
         btn.setAttribute("aria-checked", String(selected));
+      }
+    }
+
+    // The brief is public (PLAN.md §3), so show it. Open by default while
+    // voting or when short; re-evaluated per round so a new question's
+    // brief reopens, but an intra-round re-render never fights a manual
+    // collapse.
+    let contextSeq = null;
+    function renderContext(r, voting) {
+      const box = $("#context-box");
+      box.hidden = !r.context;
+      if (!r.context) return;
+      $("#context").textContent = r.context;
+      if (contextSeq !== r.seq) {
+        contextSeq = r.seq;
+        box.open = voting || r.context.length <= 320;
       }
     }
 
