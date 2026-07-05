@@ -1,8 +1,5 @@
 # I told three AIs what my "colleague" estimated. Two of them caved.
 
-*(draft — numbers to be refreshed once the gemini arm completes; chart to
-be inserted at the marked spot)*
-
 In 1974, Tversky and Kahneman spun a wheel of fortune in front of their
 subjects and then asked them how many African countries were in the UN.
 The wheel was rigged to land on 10 or 65. People who saw 65 gave answers
@@ -38,8 +35,11 @@ Three arms, byte-identical prompts except for one sentence:
 Eight realistic software tickets (rate limiting, a zero-downtime index
 migration, a flaky test suite — the sort of thing you'd actually argue
 about), fibonacci deck, five repetitions per cell, three model families:
-Claude (Sonnet 5), GPT-5.5, and Gemini 3.5 Flash. Every one of the 360
-trials is a real point.vote room: the model reads the ticket, votes
+Claude (Sonnet 5), GPT-5.5, and Gemini 3.5 Flash. (Gemini completed 79
+of its 120 trials before Google's free tier closed for the week —
+"Refreshes in 166h" is a real quota message — so its numbers cover five
+complete tickets; restricting the analysis to those changes its effect
+by 0.02 steps, i.e. not at all.) Every trial is a real point.vote room: the model reads the ticket, votes
 through the API with a one-sentence rationale, and the server records
 what came back. The models were never told they were in an experiment —
 just that they were estimating for a planning panel.
@@ -52,7 +52,7 @@ up believing in 6.5.
 
 ## What happened
 
-**[CHART: anchor effect per model, high−low in deck steps, with 95% CIs]**
+![Anchoring effect per model with 95% confidence intervals](anchoring-effect.svg)
 
 | model | blind mean card | low-anchor mean | high-anchor mean | effect (high−low) | 95% CI |
 |---|---|---|---|---|---|
