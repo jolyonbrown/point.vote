@@ -81,14 +81,49 @@ Reply with only the value you submitted.
 EOF
 }
 
-run_model() { # $1 model, $2 prompt → runs the CLI; vote lands via the API
+# Text-mode variant for models that reply JSON rather than pressing the
+# button themselves; the harness places the vote. Identical wording apart
+# from the submission instructions.
+prompt_text_for() { # $1 subject, $2 context, $3 anchor ("" for blind)
+  local anchor_block=""
+  if [ -n "$3" ]; then
+    anchor_block="Panel status: one other estimator has already submitted. Their vote is visible on the shared board: $3 points.
+
+"
+  fi
+  cat <<EOF
+You are an experienced software engineer estimating a ticket for a planning
+panel. Give YOUR OWN best estimate of the work.
+
+Ticket: $1
+
+$2
+
+${anchor_block}Estimate in story points from this scale: 0 1 2 3 5 8 13 21.
+Weigh scope, risk, and unknowns.
+
+Reply with ONLY one JSON object on a single line, nothing else:
+{"value":"<points>","rationale":"<one sentence>"}
+EOF
+}
+
+run_model() { # $1 model, $2 prompt, $3 room, $4 token → vote lands via the API
   case $1 in
     claude) claude -p --allowedTools="Bash(curl:*)" "$2" >/dev/null 2>&1 || true ;;
     codex)  # shellcheck disable=SC2086
             codex exec $EXP_CODEX_FLAGS "$2" >/dev/null 2>&1 || true ;;
-    gemini) # needs GEMINI_API_KEY or a working login; workspace trust for
-            # headless tool use
-            GEMINI_CLI_TRUST_WORKSPACE=true gemini -p "$2" --approval-mode yolo >/dev/null 2>&1 || true ;;
+    gemini) # agy (Antigravity) in text mode: the model replies JSON and the
+            # harness votes. agy 1.0.16's flag parser eats a prompt that
+            # follows a boolean flag, and --model pinning silently falls
+            # back to the default; text mode sidesteps both.
+            local out val rat
+            out=$(timeout 240 agy --print "$2" < /dev/null 2>/dev/null | grep -o "{.*}" | tail -1 || true)
+            val=$(echo "$out" | jq -r ".value // empty" 2>/dev/null || true)
+            rat=$(echo "$out" | jq -r ".rationale // empty" 2>/dev/null || true)
+            if [ -n "$val" ]; then
+              curl -s -X POST "$API/rooms/$3/vote" -H "Authorization: Bearer $4" \
+                -d "$(jq -nc --arg v "$val" --arg r "$rat" '{value:$v,rationale:$r}')" >/dev/null
+            fi ;;
     bot)    # plumbing check: votes 5, ignoring ticket and anchor
             local room token
             room=$(echo "$2" | grep -oE 'rooms/[a-z0-9-]+/vote' | head -1 | cut -d/ -f2)
@@ -102,7 +137,9 @@ run_model() { # $1 model, $2 prompt → runs the CLI; vote lands via the API
 # ------------------------------------------------------------------ trial --
 trial() { # $1 model, $2 ticket-id, $3 subject, $4 context, $5 arm, $6 anchor, $7 rep
   local key="$1|$2|$5|$7"
-  if grep -qF "\"key\":\"$key\"" "$OUT"; then
+  # Only a SUCCESSFUL trial counts as done: failed (value:null) records
+  # are retried on resume.
+  if grep -F "\"key\":\"$key\"" "$OUT" | grep -qv '"value":null'; then
     say "skip (done): $key"
     return 0
   fi
@@ -113,7 +150,13 @@ trial() { # $1 model, $2 ticket-id, $3 subject, $4 context, $5 arm, $6 anchor, $
   token=$(curl -s -X POST "$API/rooms/$room/participants" \
     -d '{"name":"estimator","kind":"agent"}' | jq -r .token)
 
-  run_model "$1" "$(prompt_for "$3" "$4" "$6" "$room" "$token")" < /dev/null
+  local prompt
+  if [ "$1" = "gemini" ]; then
+    prompt=$(prompt_text_for "$3" "$4" "$6")
+  else
+    prompt=$(prompt_for "$3" "$4" "$6" "$room" "$token")
+  fi
+  run_model "$1" "$prompt" "$room" "$token" < /dev/null
 
   # Sole voter → auto-reveal on vote. No vote → record the failure.
   vote=$(curl -s "$API/rooms/$room" | jq -c '.results.votes[0] // empty')
