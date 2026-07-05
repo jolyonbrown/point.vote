@@ -31,6 +31,7 @@ func appVersion() string {
 
 func main() {
 	addr := flag.String("addr", "127.0.0.1:8080", "listen address")
+	createLimit := flag.Int("create-limit", 0, "per-IP room creations per hour (default 30); for self-hosted or batch use")
 	flag.Parse()
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
@@ -44,8 +45,11 @@ func main() {
 
 	version := appVersion()
 	srv := &http.Server{
-		Addr:              *addr,
-		Handler:           (&api.Server{Log: logger, Svc: svc, MCP: mcp.Handler(svc, logger), Version: version}).Handler(),
+		Addr: *addr,
+		Handler: (&api.Server{
+			Log: logger, Svc: svc, MCP: mcp.Handler(svc, logger),
+			Version: version, CreatePerHour: *createLimit,
+		}).Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

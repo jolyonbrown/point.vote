@@ -1,0 +1,42 @@
+[
+  {
+    "id": "rate-limit",
+    "subject": "Add per-API-key rate limiting to the public REST API",
+    "context": "Our public REST API (12 endpoints, ~40 req/s peak) currently has no rate limiting. Add per-API-key limits: 100 requests/minute sustained, burst of 200, with 429 responses carrying Retry-After. Limits must be configurable per key tier (free/pro) from the existing key store. The API runs as 3 stateless replicas behind a load balancer; there is a Redis instance available but it is not currently a hard dependency. Include metrics for limited requests and docs updates."
+  },
+  {
+    "id": "csv-export",
+    "subject": "Add CSV export to the transactions screen",
+    "context": "Users can filter transactions (date range, category, account) and see a paginated table. Add an 'Export CSV' button that exports the CURRENT filter's full result set (not just the visible page). Typical exports are under 10k rows; the largest account would be ~400k rows. Column set matches the table plus two extra fields we already fetch. Needs to work in the web app only. Consider whether to stream server-side or generate client-side; either is acceptable if large exports don't lock up the UI or the API."
+  },
+  {
+    "id": "flaky-suite",
+    "subject": "Stabilise the flaky end-to-end test suite",
+    "context": "The e2e suite (Playwright, 74 specs) fails ~1 run in 5 on CI, almost always a different spec each time. Symptoms: timeouts waiting for elements, occasional 'target closed'. Local runs are fine. CI runs 4 workers on a shared runner. Nobody has systematically investigated; suspicion is a mix of missing await discipline, shared test data collisions between workers, and one genuinely slow endpoint. Goal: suite green 19 runs out of 20, without simply raising all timeouts or serialising the workers."
+  },
+  {
+    "id": "webhook-retry",
+    "subject": "Add retries with backoff to outbound webhooks",
+    "context": "We send webhooks for 6 event types. Today a failed delivery (non-2xx or timeout) is dropped and logged. Add retries: exponential backoff with jitter, 5 attempts over ~30 minutes, a dead-letter table for exhausted deliveries, and an admin endpoint to re-drive dead letters. Delivery ordering per-endpoint should be preserved where practical. Current volume ~2k webhooks/day. The sending code is a synchronous inline call in the request path (this may need to change)."
+  },
+  {
+    "id": "settings-i18n",
+    "subject": "Internationalise the settings area",
+    "context": "The settings area (14 screens, ~350 user-facing strings, currently hard-coded English) needs i18n so we can launch German and Japanese. We have no i18n framework in the frontend yet; pick and wire one, extract the strings, and integrate with the translation vendor's file format (XLIFF). Dates and numbers on these screens must localise too. Translations themselves are the vendor's job, not this ticket. Other areas of the app are out of scope but the framework choice should not paint us into a corner."
+  },
+  {
+    "id": "index-migration",
+    "subject": "Add a composite index to the events table without downtime",
+    "context": "The events table (Postgres, 900M rows, ~1.2k inserts/s) needs a composite index on (account_id, created_at DESC) to fix a slow dashboard query (currently 8-30s, needs <500ms). The table is written continuously; we cannot take downtime. Plan and execute a zero-downtime approach (likely CREATE INDEX CONCURRENTLY), including handling the failure/retry semantics, disk headroom check (we believe the index will be ~40GB), monitoring during the build, and rollback if replication lag exceeds thresholds."
+  },
+  {
+    "id": "dark-mode",
+    "subject": "Add dark mode to the customer dashboard",
+    "context": "The dashboard (single-page app, ~30 screens) uses hard-coded colours throughout: hex values scattered across ~120 component stylesheets, plus 6 third-party chart/table widgets with their own theming APIs. Add a dark theme: tokenise the palette, honour prefers-color-scheme with a manual override persisted per user, restyle the third-party widgets via their theme hooks, and make sure the 40+ status colours (success/warning/error variants) keep AA contrast in both themes. Screenshots in marketing pages are out of scope."
+  },
+  {
+    "id": "config-file",
+    "subject": "Move service configuration from environment variables to a config file",
+    "context": "The service reads 47 environment variables at startup (parsed ad hoc across 9 files). Introduce a single versioned YAML config file with schema validation, sensible defaults, and environment-variable overrides for secrets only. Must stay backwards compatible for one release (env vars still work, with deprecation warnings), update the Helm chart and local dev scripts, and document every key. No behavioural changes to the service itself."
+  }
+]
