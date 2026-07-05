@@ -482,7 +482,9 @@ input::placeholder { color: var(--ink-dim); }
 
 .vote-group {
   display: grid;
-  grid-template-columns: minmax(3rem, max-content) 1fr;
+  /* Cap the value track so a long value wraps early rather than
+     starving the voter/rationale column on a narrow viewport. */
+  grid-template-columns: minmax(3rem, 9rem) 1fr;
   gap: 0.9rem;
   align-items: start;
   border: 1px solid var(--line);
