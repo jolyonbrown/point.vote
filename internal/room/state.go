@@ -74,11 +74,15 @@ type Top struct {
 }
 
 // RoundSummary is an archived round in the session-only history ring.
+// Called carries the settled value when this round concluded a
+// deliberation — the settlement is archived here and cleared from the
+// live room when the next round starts.
 type RoundSummary struct {
 	Seq     int            `json:"seq"`
 	Subject string         `json:"subject"`
 	Votes   []RevealedVote `json:"votes"`
 	Stats   Stats          `json:"stats"`
+	Called  string         `json:"called,omitempty"`
 }
 
 // Settlement records the deliberation's outcome: the value the room

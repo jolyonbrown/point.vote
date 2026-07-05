@@ -575,6 +575,20 @@ func TestSettle(t *testing.T) {
 	if resp["settled"].(map[string]any)["value"] != "8" {
 		t.Fatalf("GET settled = %v", resp["settled"])
 	}
+
+	// Starting the next round archives the call onto the history entry
+	// and clears the live settlement.
+	status, resp, _ = doJSON(t, "POST", ts.URL+"/api/v1/rooms/"+roomID+"/rounds", alice, ip, nil)
+	if status != http.StatusCreated {
+		t.Fatalf("new round = %d %v", status, resp)
+	}
+	if resp["settled"] != nil {
+		t.Fatalf("settled = %v after new round, want null", resp["settled"])
+	}
+	hist := resp["history"].([]any)
+	if len(hist) != 1 || hist[0].(map[string]any)["called"] != "8" {
+		t.Fatalf("history = %v, want one entry called 8", hist)
+	}
 }
 
 func TestReact(t *testing.T) {

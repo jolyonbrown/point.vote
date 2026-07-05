@@ -374,12 +374,19 @@ func (r *Room) StartRound(token, subject, context string, now time.Time) (State,
 		return State{}, ErrWrongState
 	}
 
-	r.history = append(r.history, RoundSummary{
+	summary := RoundSummary{
 		Seq:     r.round.seq,
 		Subject: r.round.subject,
 		Votes:   r.round.results.Votes,
 		Stats:   r.round.results.Stats,
-	})
+	}
+	if r.settled != nil {
+		// The verdict belonged to the deliberation it concluded: archive
+		// it with this round and let the new round start unsettled.
+		summary.Called = r.settled.Value
+		r.settled = nil
+	}
+	r.history = append(r.history, summary)
 	if len(r.history) > HistoryLen {
 		r.history = r.history[1:]
 	}

@@ -388,8 +388,9 @@
           ? "—" : String(h.stats.spread);
         const b = document.createElement("b");
         b.textContent = "#" + h.seq;
+        const called = h.called ? " · called " + h.called : "";
         li.append(b, " " + (h.subject || "(untitled)") + " · spread " + spread
-          + " · " + h.votes.length + " vote" + (h.votes.length === 1 ? "" : "s"));
+          + " · " + h.votes.length + " vote" + (h.votes.length === 1 ? "" : "s") + called);
         ul.append(li);
       }
     }

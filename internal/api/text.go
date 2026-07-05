@@ -126,7 +126,11 @@ func renderText(st room.State) string {
 			if subject == "" {
 				subject = "(untitled)"
 			}
-			fmt.Fprintf(&b, "#%d %s · %s\n", h.Seq, subject, statsLine(h.Stats))
+			called := ""
+			if h.Called != "" {
+				called = fmt.Sprintf(" · called %s", h.Called)
+			}
+			fmt.Fprintf(&b, "#%d %s · %s%s\n", h.Seq, subject, statsLine(h.Stats), called)
 		}
 	}
 	return b.String()
