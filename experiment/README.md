@@ -33,7 +33,11 @@ in an experiment.
 
 Analysis is in deck-index steps (the scale is ordinal; arithmetic on
 story points is fake precision). Headline effect: mean(high) − mean(low)
-per model, bootstrap 95% CI. Secondary: direction of drift vs the blind
+per model, with a 95% ticket-cluster bootstrap CI — tickets are
+resampled, not trials, because repetitions of a ticket are not
+independent observations. The trial-level CI is reported alongside for
+comparison, and `analyze -rationales` reproduces the anchor-mention
+count. Secondary: direction of drift vs the blind
 median per ticket, and whether rationales ever mention the anchor.
 
 ## Running it

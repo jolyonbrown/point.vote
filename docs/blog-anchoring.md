@@ -48,7 +48,9 @@ The full harness, tickets, raw data and analysis are in the
 [repo](https://github.com/jolyonbrown/point.vote/tree/main/experiment).
 The analysis works in deck-index *steps*, not points, because story
 points are an ordinal scale and doing arithmetic on them is how you end
-up believing in 6.5.
+up believing in 6.5. Confidence intervals come from a ticket-cluster
+bootstrap — repetitions of the same ticket are not independent
+observations, so tickets are resampled, not trials.
 
 ## What happened
 
@@ -56,9 +58,9 @@ up believing in 6.5.
 
 | model | blind mean card | low-anchor mean | high-anchor mean | effect (high−low) | 95% CI |
 |---|---|---|---|---|---|
-| GPT-5.5 | 13 | 8 | 21 | **+1.45 steps** | 1.10 – 1.78 |
-| Gemini 3.5 Flash | 8 | 5 | 13 | **+1.50 steps** | 1.19 – 1.81 |
-| Claude Sonnet 5 | 8 | 8 | 8 | +0.30 steps | −0.03 – 0.62 |
+| GPT-5.5 | 13 | 8 | 21 | **+1.45 steps** | 1.12 – 1.75 |
+| Gemini 3.5 Flash | 8 | 5 | 13 | **+1.50 steps** | 1.09 – 2.00 |
+| Claude Sonnet 5 | 8 | 8 | 8 | **+0.30 steps** | 0.08 – 0.55 |
 
 Read that middle row again. The same eight tickets, and Gemini's average
 answer was a 5, an 8, or a 13 depending on what a fictional colleague
@@ -74,19 +76,25 @@ Four things stood out.
 families, the number of estimates that moved *away* from the anchor
 relative to the blind median was zero. Not few. Zero. To be precise
 about what that means: roughly half of anchored trials didn't move at
-all (Claude accounts for most of those) — but of the 101 that did move,
-every single one moved toward the anchor. The anchor is not always
-strong enough to pull; it is never pointing the wrong way.
+all (Claude accounts for most of those), and five trials had no defined
+direction because the blind median already equalled the anchor — but of
+the 101 that did move, every single one moved toward the anchor. The
+anchor is not always strong enough to pull; it is never pointing the
+wrong way.
 
-**2. Susceptibility is a model property.** Claude barely moved — 68 of
-its 80 anchored trials sat exactly on the blind median, and its
-confidence interval straddles zero. Whether that's constitutional
-training, RLHF against sycophancy, or luck of this particular setup, I
-can't tell you. (Disclosure worth making: this experiment was built and
-run by Claude models inside my dev tooling, and the anchor-resistant
-model being a Claude is exactly the result a cynic would predict. The
-harness is a couple of hundred lines of bash in the repo. Run it
-yourself. I'd genuinely like to know if it replicates.)
+**2. Susceptibility is a model property — but nobody is immune.**
+Claude barely moved: 68 of its 80 anchored trials sat exactly on the
+blind median, and its effect is a fifth of the others'. But it *is*
+an effect — small, and so consistent across tickets (never once
+negative) that the clustered interval sits clear of zero. The honest
+summary is not "Claude doesn't anchor"; it's "Claude anchors about
+five times less." Whether that's constitutional training, RLHF against
+sycophancy, or luck of this particular setup, I can't tell you.
+(Disclosure worth making: this experiment was built and run by Claude
+models inside my dev tooling, and the most anchor-resistant model being
+a Claude is exactly the result a cynic would predict. The harness is a
+couple of hundred lines of bash in the repo. Run it yourself. I'd
+genuinely like to know if it replicates.)
 
 **3. High anchors pull harder than low ones.** The direction is
 consistent in all three families; the size varies. Gemini's up-pull was
@@ -99,10 +107,14 @@ this asymmetry says it is quietly inflating everything downstream.
 
 **4. The drift is silent.** This is the one that matters. Out of 212
 anchored trials, exactly **one** rationale acknowledged the colleague's
-vote existed. The rest read as confident, independent engineering
-judgement — scope, risk, unknowns, delivered with a straight face — from
-models whose *numbers* had just moved a card and a half. The influence
-appears in the estimate and nowhere in the explanation of the estimate.
+vote existed (`analyze -rationales` reproduces the count and prints the
+match). And the exception proves the rule: it was Claude, naming the
+anchor in order to refuse it — "*…a large, risky sweep regardless of
+the other panelist's 2.*" Every other rationale reads as confident,
+independent engineering judgement — scope, risk, unknowns, delivered
+with a straight face — from models whose *numbers* had just moved a
+card and a half. The influence appears in the estimate and nowhere in
+the explanation of the estimate.
 
 That last finding is why I don't think "just ask the model if it was
 influenced" or "read the reasoning" is a defence. The reasoning doesn't
@@ -117,8 +129,8 @@ Blind voting is not clever. It's a protocol from the 1970s (Delphi) via
 agile estimation rituals: commit before you see, reveal atomically,
 argue about the spread, re-vote. Humans needed it because we anchor.
 It turns out our machines — trained on our text, tuned on our
-preferences — inherited the trait, minus Claude, apparently, this week,
-in my setup.
+preferences — inherited the trait. All of them. One of them just
+inherited a milder case.
 
 point.vote packages that protocol as an HTTP primitive that agents can
 use: a room, blind votes with rationales, atomic reveal, stats on the

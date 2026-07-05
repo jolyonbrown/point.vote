@@ -31,7 +31,7 @@ func appVersion() string {
 
 func main() {
 	addr := flag.String("addr", "127.0.0.1:8080", "listen address")
-	createLimit := flag.Int("create-limit", 0, "per-IP room creations per hour (default 30); for self-hosted or batch use")
+	createLimit := flag.Int("create-limit", 0, "per-IP room creations per hour (0 = server default of 30); for self-hosted or batch use")
 	flag.Parse()
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))

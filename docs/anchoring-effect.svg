@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="360" viewBox="0 0 760 360" role="img" aria-label="Anchoring effect per model: GPT-5.5 +1.45 deck steps (CI 1.10 to 1.78), Gemini 3.5 Flash +1.50 (CI 1.19 to 1.81), Claude Sonnet 5 +0.30 (CI -0.03 to 0.62). Zero means no effect.">
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="360" viewBox="0 0 760 360" role="img" aria-label="Anchoring effect per model with 95% ticket-cluster bootstrap CIs: GPT-5.5 +1.45 deck steps (CI 1.12 to 1.75), Gemini 3.5 Flash +1.50 (CI 1.09 to 2.00), Claude Sonnet 5 +0.30 (CI 0.08 to 0.55). Zero means no effect.">
   <style>
     text { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
     .title { font-size: 17px; font-weight: 700; fill: #211c15; }
@@ -12,7 +12,7 @@
   <rect width="760" height="360" fill="#faf8f4"/>
 
   <text x="40" y="38" class="title">The anchor effect</text>
-  <text x="40" y="58" class="sub">high-anchor mean − low-anchor mean, in deck steps · 95% bootstrap CI · fibonacci deck, 8 tickets</text>
+  <text x="40" y="58" class="sub">high-anchor mean − low-anchor mean, deck steps · 95% ticket-cluster bootstrap CI · 8 tickets</text>
 
   <!-- gridlines -->
   <g stroke="#e0d9cc" stroke-width="1">
@@ -38,27 +38,27 @@
   <!-- codex -->
   <text x="40" y="124" class="label">GPT-5.5</text>
   <text x="40" y="139" class="n">codex · n=40/arm</text>
-  <line x1="500" y1="120" x2="651.1" y2="120" stroke="#b45309" stroke-width="2"/>
-  <line x1="500" y1="114" x2="500" y2="126" stroke="#b45309" stroke-width="2"/>
-  <line x1="651.1" y1="114" x2="651.1" y2="126" stroke="#b45309" stroke-width="2"/>
+  <line x1="504.4" y1="120" x2="644.4" y2="120" stroke="#b45309" stroke-width="2"/>
+  <line x1="504.4" y1="114" x2="504.4" y2="126" stroke="#b45309" stroke-width="2"/>
+  <line x1="644.4" y1="114" x2="644.4" y2="126" stroke="#b45309" stroke-width="2"/>
   <circle cx="577.8" cy="120" r="7" fill="#b45309" stroke="#faf8f4" stroke-width="2"/>
   <text x="577.8" y="103" class="val" text-anchor="middle">+1.45</text>
 
   <!-- gemini -->
   <text x="40" y="179" class="label">Gemini 3.5 Flash</text>
   <text x="40" y="194" class="n">agy · n=26–27/arm</text>
-  <line x1="520" y1="175" x2="657.8" y2="175" stroke="#b45309" stroke-width="2"/>
-  <line x1="520" y1="169" x2="520" y2="181" stroke="#b45309" stroke-width="2"/>
-  <line x1="657.8" y1="169" x2="657.8" y2="181" stroke="#b45309" stroke-width="2"/>
+  <line x1="497.8" y1="175" x2="700" y2="175" stroke="#b45309" stroke-width="2"/>
+  <line x1="497.8" y1="169" x2="497.8" y2="181" stroke="#b45309" stroke-width="2"/>
+  <line x1="700" y1="169" x2="700" y2="181" stroke="#b45309" stroke-width="2"/>
   <circle cx="588.9" cy="175" r="7" fill="#b45309" stroke="#faf8f4" stroke-width="2"/>
   <text x="588.9" y="158" class="val" text-anchor="middle">+1.50</text>
 
   <!-- claude -->
   <text x="40" y="234" class="label">Claude Sonnet 5</text>
   <text x="40" y="249" class="n">claude -p · n=40/arm</text>
-  <line x1="248.9" y1="230" x2="393.3" y2="230" stroke="#b45309" stroke-width="2"/>
-  <line x1="248.9" y1="224" x2="248.9" y2="236" stroke="#b45309" stroke-width="2"/>
-  <line x1="393.3" y1="224" x2="393.3" y2="236" stroke="#b45309" stroke-width="2"/>
+  <line x1="273.3" y1="230" x2="377.8" y2="230" stroke="#b45309" stroke-width="2"/>
+  <line x1="273.3" y1="224" x2="273.3" y2="236" stroke="#b45309" stroke-width="2"/>
+  <line x1="377.8" y1="224" x2="377.8" y2="236" stroke="#b45309" stroke-width="2"/>
   <circle cx="322.2" cy="230" r="7" fill="#b45309" stroke="#faf8f4" stroke-width="2"/>
   <text x="322.2" y="213" class="val" text-anchor="middle">+0.30</text>
 
