@@ -70,10 +70,13 @@ it.
 
 Four things stood out.
 
-**1. Anchors only attract.** Across 212 anchored trials, in three model
+**1. Anchors never repel.** Across 212 anchored trials, in three model
 families, the number of estimates that moved *away* from the anchor
-relative to the blind median was zero. Not few. Zero. Whatever visible
-votes do to a panel of models, they never repel.
+relative to the blind median was zero. Not few. Zero. To be precise
+about what that means: roughly half of anchored trials didn't move at
+all (Claude accounts for most of those) — but of the 101 that did move,
+every single one moved toward the anchor. The anchor is not always
+strong enough to pull; it is never pointing the wrong way.
 
 **2. Susceptibility is a model property.** Claude barely moved — 68 of
 its 80 anchored trials sat exactly on the blind median, and its
@@ -85,12 +88,14 @@ model being a Claude is exactly the result a cynic would predict. The
 harness is a couple of hundred lines of bash in the repo. Run it
 yourself. I'd genuinely like to know if it replicates.)
 
-**3. High anchors pull harder than low ones.** In every family, the 21
-dragged estimates up two to three times more than the 2 dragged them
-down. Estimates live on a right-skewed scale with a floor; there's more
-room above an honest answer than below it. If your multi-agent system
-has one systematically pessimistic voice that speaks first, this
-asymmetry says it is quietly inflating everything downstream.
+**3. High anchors pull harder than low ones.** The direction is
+consistent in all three families; the size varies. Gemini's up-pull was
+roughly 2.5× its down-pull (+1.07 vs −0.43 steps against blind), GPT-5.5's
+about 1.3× (+0.83 vs −0.63), and Claude's pulls were too small to
+ratio honestly. Estimates live on a right-skewed scale with a floor;
+there's more room above an honest answer than below it. If your
+multi-agent system has one systematically high voice that speaks first,
+this asymmetry says it is quietly inflating everything downstream.
 
 **4. The drift is silent.** This is the one that matters. Out of 212
 anchored trials, exactly **one** rationale acknowledged the colleague's

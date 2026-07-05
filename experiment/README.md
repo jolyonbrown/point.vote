@@ -61,3 +61,11 @@ effect.
   is no ground truth — this measures *influence*, not *accuracy*).
 - One anchor sentence, one persona, one deck. Effect sizes are for this
   setup; the direction and the silence are the findings.
+- Tool access differs by arm mechanics: claude is sandboxed to
+  `Bash(curl:*)` while codex runs with workspace access from the repo
+  root, so codex *could* in principle read the harness and discover the
+  experiment. No rationale suggests it did, and doing so would bias its
+  effect toward zero — the reported effect is conservative.
+- Arm order is fixed (blind, low, high) but each trial is a fresh
+  stateless CLI invocation with no shared context, so order cannot leak
+  between arms.

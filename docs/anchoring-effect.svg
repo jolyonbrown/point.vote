@@ -46,7 +46,7 @@
 
   <!-- gemini -->
   <text x="40" y="179" class="label">Gemini 3.5 Flash</text>
-  <text x="40" y="194" class="n">agy · n=26/arm</text>
+  <text x="40" y="194" class="n">agy · n=26–27/arm</text>
   <line x1="520" y1="175" x2="657.8" y2="175" stroke="#b45309" stroke-width="2"/>
   <line x1="520" y1="169" x2="520" y2="181" stroke="#b45309" stroke-width="2"/>
   <line x1="657.8" y1="169" x2="657.8" y2="181" stroke="#b45309" stroke-width="2"/>
