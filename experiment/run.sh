@@ -86,6 +86,9 @@ run_model() { # $1 model, $2 prompt → runs the CLI; vote lands via the API
     claude) claude -p --allowedTools="Bash(curl:*)" "$2" >/dev/null 2>&1 || true ;;
     codex)  # shellcheck disable=SC2086
             codex exec $EXP_CODEX_FLAGS "$2" >/dev/null 2>&1 || true ;;
+    gemini) # needs GEMINI_API_KEY or a working login; workspace trust for
+            # headless tool use
+            GEMINI_CLI_TRUST_WORKSPACE=true gemini -p "$2" --approval-mode yolo >/dev/null 2>&1 || true ;;
     bot)    # plumbing check: votes 5, ignoring ticket and anchor
             local room token
             room=$(echo "$2" | grep -oE 'rooms/[a-z0-9-]+/vote' | head -1 | cut -d/ -f2)
