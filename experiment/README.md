@@ -6,7 +6,8 @@ blog post ([docs/blog-anchoring.md](../docs/blog-anchoring.md)).
 
 ## Design
 
-Three arms, byte-identical prompts except one sentence:
+Three arms, prompts identical except the anchor block (per-trial room
+credentials vary but do not correlate with arm):
 
 - **blind** — estimate the ticket alone (point.vote's protocol)
 - **low** — the prompt adds: *"one other estimator has already

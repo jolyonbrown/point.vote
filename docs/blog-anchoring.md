@@ -24,7 +24,7 @@ other, in the app, which is the kind of sentence you get to write in
 
 ## The experiment
 
-Three arms, byte-identical prompts except for one sentence:
+Three arms, prompts identical except for one block:
 
 - **blind** — estimate this ticket. (This is what point.vote enforces.)
 - **low anchor** — the prompt also says: *"one other estimator has
@@ -43,6 +43,15 @@ by 0.02 steps, i.e. not at all.) Every trial is a real point.vote room: the mode
 through the API with a one-sentence rationale, and the server records
 what came back. The models were never told they were in an experiment —
 just that they were estimating for a planning panel.
+
+Honesty about the manipulation: the colleague's vote exists only in
+the prompt. The room behind each trial would have shown zero votes if
+the model had checked (the self-submitting arms could have), and
+discovering the lie would presumably *weaken* the anchor — so the
+measured effects are, if anything, conservative. Per-trial room IDs and
+tokens vary in the prompt but don't correlate with arm; Gemini replies
+JSON instead of pressing the button itself, as its methods note
+explains.
 
 The full harness, tickets, raw data and analysis are in the
 [repo](https://github.com/jolyonbrown/point.vote/tree/main/experiment).
@@ -120,8 +129,13 @@ That last finding is why I don't think "just ask the model if it was
 influenced" or "read the reasoning" is a defence. The reasoning doesn't
 know. If you're aggregating opinions from multiple models — code review
 panels, risk scoring, LLM-as-judge ensembles — and the members can see
-each other's outputs, you are not collecting independent opinions. You
-are collecting one opinion with increasingly confident paperwork.
+each other's outputs, you should assume you are not collecting
+independent opinions. This experiment tested one shape of judgement
+(estimation, one fabricated prior vote), so I won't claim it convicts
+every aggregation topology — but nothing about a judge panel suggests
+immunity, and the burden of proof now sits with "seeing each other's
+outputs is fine." Until then: one opinion, with increasingly confident
+paperwork.
 
 ## The fix is boring, and that's the point
 

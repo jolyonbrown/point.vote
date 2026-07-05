@@ -55,7 +55,8 @@ curl -sf "$BASE/healthz" >/dev/null || { echo "server failed to start" >&2; exit
 
 # ---------------------------------------------------------------- prompts --
 # The subject model must not know it is in an experiment (demand effects).
-# Both arms get byte-identical prompts except the anchor block.
+# Arms get identical prompts except the anchor block (room id/token
+# vary per trial, uncorrelated with arm).
 prompt_for() { # $1 subject, $2 context, $3 anchor ("" for blind), $4 room, $5 token
   local anchor_block=""
   if [ -n "$3" ]; then
