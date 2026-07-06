@@ -78,9 +78,14 @@ Code (the model parameter only takes Claude models, so use a wrapper):
 
 - Spawn a thin Claude wrapper agent with `model: sonnet`, `effort: low`
   whose prompt instructs it to write a self-contained Codex prompt, run
-  `codex exec` via Bash, and return the result.
-  <!-- Source screenshot was cut off at this line — verify the tail against
-       the original before relying on it. -->
+  `codex exec` via Bash, and return the result verbatim — no paraphrase.
+- Container caveats, learned the hard way: Codex's bwrap sandbox cannot
+  initialise inside this Docker container, so `codex exec` can read but
+  not write or run commands unless the user explicitly authorises
+  `--dangerously-bypass-approvals-and-sandbox` (ask; never assume).
+  Read-only tasks (reviews, audits) need no bypass — embed everything the
+  task needs (spec excerpt + full diff) in one packet delivered via
+  `--prompt-file` or a quoted heredoc; never shell-interpolate a prompt.
 
 ## Applying the policy to this repo
 
@@ -95,5 +100,25 @@ Code (the model parameter only takes Claude models, so use a wrapper):
 - Reviews before each phase gate: fable-5 or opus-4.8, with gpt-5.5 as the
   independent second opinion — different priors catching different blind
   spots.
-- Dogfood clause: once Phase 1 lands, estimate disagreements between models
-  about this codebase get settled in a point.vote room. Obviously.
+- Dogfood clause: estimate disagreements between models about this
+  codebase get settled in a point.vote room. Obviously. (Exercised: the
+  roadmap vote in `reed-truck-84` chose the anchoring experiment,
+  unanimously, blind.)
+
+## Settling decisions in a point.vote room
+
+Works from any repo, not just this one — the app is live at
+https://point.vote (REST + MCP at `/mcp`; the whole protocol fits in
+https://point.vote/llms.txt).
+
+1. Create a room whose question carries the full context brief and whose
+   custom deck is the option list (deck values are free-form strings).
+2. Join one participant per model; hand each model its participant token
+   inside its prompt, plus the room URL.
+3. Each model votes blind with a one-line rationale. Reveal is atomic —
+   the server never leaks a vote while the round is open, so anchoring
+   (see `experiment/`) is structurally impossible.
+4. Ties or wide spread: share the revealed rationales, open a new round,
+   re-vote — Delphi style. `settle` records the final call.
+5. Rooms evaporate after 2h: copy the revealed state into the issue or PR
+   before walking away.
