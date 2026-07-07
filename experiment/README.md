@@ -62,7 +62,10 @@ rationales ever mention the anchor.
 
 Follow-up measures: the dose sweep gets an OLS slope of estimate index
 on anchor index across the six neutral-wording arms ("estimate steps
-per anchor step"), ticket-cluster bootstrapped like the effects;
+per anchor step"), ticket-cluster bootstrapped like the effects, and
+reported again over the four new interior arms alone — the endpoints
+are the earlier baseline batch and carry the most leverage in the fit,
+and for claude the interior-only CI crosses zero;
 inoculation and authority get the same high−low effect as baseline,
 computed within their own arm pairs. The "zero acknowledgments in 160
 inoculated trials" claim was additionally checked with a wider net than

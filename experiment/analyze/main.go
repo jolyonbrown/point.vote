@@ -189,13 +189,16 @@ func olsSlope(xs, ys []float64) float64 {
 	return (n*sxy - sx*sy) / den
 }
 
-// doseSlope regresses estimate index on anchor index across the
-// neutral-wording anchored arms, with a ticket-cluster bootstrap CI —
-// "how many steps does the estimate move per step of anchor".
-func doseSlope(byTicket map[string]map[string][]float64) (s, lo, hi float64) {
+// doseSlope regresses estimate index on anchor index across the given
+// anchored arms, with a ticket-cluster bootstrap CI — "how many steps
+// does the estimate move per step of anchor". Called once with the full
+// sweep (baseline endpoints included) and once with only the four new
+// interior arms, because the endpoints ran in an earlier batch and
+// carry the most leverage in the fit.
+func doseSlope(byTicket map[string]map[string][]float64, arms []string) (s, lo, hi float64) {
 	collect := func(tickets []string) (xs, ys []float64) {
 		for _, t := range tickets {
-			for _, arm := range doseArms {
+			for _, arm := range arms {
 				for _, y := range byTicket[t][arm] {
 					xs = append(xs, float64(anchorIdx[arm]))
 					ys = append(ys, y)
@@ -433,9 +436,11 @@ func main() {
 				fmt.Printf("| %s | %s (%d) | %d | %.2f | %s |\n",
 					arm, deck[anchorIdx[arm]], anchorIdx[arm], len(xs), mean(xs), deck[int(math.Round(mean(xs)))])
 			}
-			s, slo, shi := doseSlope(perTicket[m])
-			fmt.Printf("\n**Slope: %.3f estimate steps per anchor step** (95%% ticket-cluster CI %.3f to %.3f; blind mean %.2f for reference)\n\n",
+			s, slo, shi := doseSlope(perTicket[m], doseArms)
+			is, ilo, ihi := doseSlope(perTicket[m], doseArms[1:len(doseArms)-1])
+			fmt.Printf("\n**Slope: %.3f estimate steps per anchor step** (95%% ticket-cluster CI %.3f to %.3f; blind mean %.2f for reference)\n",
 				s, slo, shi, mean(indices[m]["blind"]))
+			fmt.Printf("Interior arms only (dose3–dose13, excluding the reused baseline endpoints): %.3f (%.3f to %.3f)\n\n", is, ilo, ihi)
 		}
 
 		if len(indices[m]["inoc-low"]) > 0 || len(indices[m]["inoc-high"]) > 0 {

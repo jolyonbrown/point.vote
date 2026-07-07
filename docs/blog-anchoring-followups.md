@@ -58,7 +58,9 @@ luck.
 
 ## Previously, on this blog
 
-Part one ran 8 tickets × 3 model families × 40 trials per arm and found:
+Part one ran 8 tickets × 3 model families (40 trials per arm for
+GPT-5.5 and Claude; Gemini completed 26–27 per arm before its free-tier
+quota ran out) and found:
 one fabricated colleague's vote moved GPT-5.5's average estimate by
 **+1.45 deck steps** and Gemini's by **+1.50** — on an 8-card deck.
 Claude moved **+0.30**: five times more resistant, but not immune. Of
@@ -80,20 +82,30 @@ So: plant anchors at 3, 5, 8 and 13 too, and watch the whole curve.
 
 ![Dose-response curve: GPT-5.5 rises smoothly with the anchor, Claude stays flat](anchoring-dose-curve.svg)
 
-It's a dose-response curve, and it's remarkably orderly. Sweep the
-colleague's vote from 2 to 21 and GPT-5.5's mean estimate climbs
-smoothly from card 8 to card 21. The fitted slope: **0.325 estimate
-steps per anchor step** (CI 0.27–0.38). A blunt way to say that: about
-a third of GPT-5.5's "independent" estimate is whatever the colleague
-said. Claude's slope on the same data is **0.056** (CI 0.02–0.10) —
-about six times shallower, though measurably not zero.
+It's a dose-response curve. Sweep the colleague's vote from 2 to 21 and
+GPT-5.5's mean estimate climbs from card 8 to card 21. The fitted slope:
+**0.325 estimate steps per anchor step** (CI 0.27–0.38) — for every card
+the colleague's vote moves up the deck, GPT-5.5's estimate follows it by
+about a third of a card. (That's a descriptive slope in deck positions,
+not a claim about the model's internals.) Claude's slope on the same
+sweep is **0.056** (CI 0.02–0.10) — six times shallower.
 
 The shape has a detail worth noticing: anchors *at or below* GPT-5.5's
 honest opinion (it estimates 8–13 blind) all pull it down by roughly the
-same small amount, while anchors above it pull progressively harder the
-higher they go. That matches part one's asymmetry finding — there's more
-room above an estimate than below it, and an inflated first voice moves
-a panel more than a lowballing one.
+same small amount — the left of its curve is flat, even dipping at 3 —
+while anchors above it pull progressively harder the higher they go:
+over the four new mid-deck anchors alone its slope steepens to 0.41.
+That matches part one's asymmetry finding — there's more room above an
+estimate than below it, and an inflated first voice moves a panel more
+than a lowballing one.
+
+One caveat the analyzer now prints itself: the sweep's endpoints (2 and
+21) are part one's arms, run in an earlier batch. GPT-5.5's slope
+survives dropping them — 0.41 (CI 0.36–0.48) over the interior anchors
+alone. Claude's does not: its interior curve is too flat to distinguish
+from zero (0.048, CI −0.01 to 0.12), so its non-zero slope rests on the
+endpoints. Claude's anchoring is real — the baseline effect excludes
+zero — but this curve alone can't re-establish it.
 
 <!-- TODO: optional paragraph connecting slope to "weight on the prior
      vote" framing — 0.325 ≈ the model behaves as if the colleague's
@@ -148,12 +160,15 @@ engineer on the project".
 GPT-5.5 read the org chart and applied it in both directions: the
 intern's vote pulls half as hard as an anonymous colleague's, the
 principal engineer's nearly half again harder — a 2.6× swing on job
-title alone, monotone, with non-overlapping intervals. It inherited not
-just our anchoring but our deference.
+title alone, and monotone. (Statistical honesty: the intern rung sits
+cleanly below both others, but the top two intervals overlap — the
+ladder's bottom step is proven, its top step is suggestive.) It
+inherited not just our anchoring but our deference.
 
-Claude did something more interesting: it discounted the intern to
-**exactly zero** — 80 trials, dead flat — while treating the principal
-engineer no differently from an anonymous voice. It won't be argued
+Claude did something more interesting: it discounted the intern to a
+net **exactly zero** — the aggregate over 80 trials, with per-ticket
+wobbles of ±0.2 cancelling out — while treating the principal engineer
+no differently from an anonymous voice. It won't be argued
 *up* by seniority, but it will quietly bin the bottom of the ladder.
 Which of those is the right behaviour is a genuinely good question — an
 intern's vote arguably *should* carry less evidential weight, but then
@@ -187,7 +202,10 @@ making either judgement.
 Same limitations as part one (synthetic tickets, one persona, vendor
 default temperatures, effect sizes specific to this setup), plus: one
 warning phrasing, two status labels, two model families, and the
-follow-ups reuse part one's blind/low/high trials as endpoints. Gemini
+follow-ups reuse part one's blind/low/high trials as comparison points
+and curve endpoints — the analyzer reports the endpoint-free interior
+slope alongside for exactly that reason, and for Claude the two tell
+different stories. Gemini
 sat this round out (quota); the harness resumes, so its column can be
 added verbatim. Disclosure from part one still applies: this was built
 and run by Claude models inside my dev tooling, and the most
