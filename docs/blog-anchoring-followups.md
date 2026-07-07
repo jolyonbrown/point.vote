@@ -161,19 +161,47 @@ cleanly below both others, but the top two intervals overlap — the
 ladder's bottom step is proven, its top step is suggestive.) It
 inherited not just our anchoring but our deference.
 
-Claude did something more interesting: it discounted the intern to a
-net **exactly zero** — the aggregate over 80 trials, with per-ticket
+Claude did something different: it discounted the intern to a net
+**exactly zero** — the aggregate over 80 trials, with per-ticket
 wobbles of ±0.2 cancelling out — while treating the principal engineer
-no differently from an anonymous voice. It won't be argued
-*up* by seniority, but it will quietly bin the bottom of the ladder.
-Which of those is the right behaviour is a genuinely good question — an
-intern's vote arguably *should* carry less evidential weight, but then
-so should a fabricated colleague's, and nobody's rationale mentions
-making either judgement.
+no differently from an anonymous voice. It won't be argued *up* by
+seniority, but it will quietly bin the bottom of the ladder.
 
-<!-- TODO: decide how hard to push the "models have a social ladder"
-     framing; it's the most quotable finding but also the easiest to
-     over-read from two personas × two models -->
+### Is this a thing?
+
+That's the observation. Here's its epistemic status: two personas, two
+model families, one domain, eight tickets — and we went looking for
+status-weighting and found it on the first attempt, which is exactly
+when you should hold a result loosely. So rather than a claim, treat
+this section as a question for people with bigger labs than a Raspberry
+Pi: **is authority-weighted anchoring a general property of these
+models?**
+
+What we'd ask next, in rough order of how much each answer would tell
+you:
+
+- **More rungs, more phrasings.** Junior dev, staff engineer, CTO; "the
+  person who wrote this module"; a named stranger. Does influence track
+  the ladder smoothly, or is it a crude insider/outsider gate?
+- **Where does it come from?** Deference to seniority saturates the
+  pretraining distribution, so some inheritance is expected. But the two
+  families disagree on *shape* — GPT-5.5 amplifies in both directions,
+  Claude only discounts downward — which suggests the shape is a
+  post-training outcome, not an inevitability. Anyone with access to
+  intermediate checkpoints could locate where the ladder gets built,
+  which is not an experiment we can run from out here.
+- **Is the discount even wrong?** An intern's estimate genuinely is
+  weaker evidence; a good Bayesian discounts it. But a good Bayesian
+  would *say so*. We searched all 320 authority-arm rationales for any
+  mention of the source — intern, principal, seniority, weighing,
+  deferring, anyone's vote at all — and found three matches, every one
+  a false positive from ticket vocabulary. Whatever is doing the
+  weighing, it is not the part that writes the explanations.
+
+If you work on model behaviour and this is already known internally —
+or known to be wrong — we'd genuinely like to hear it. The harness is a
+couple of hundred lines of bash, the raw data is in the repo, and a
+replication is an afternoon.
 
 ## What we make of it
 
@@ -184,8 +212,10 @@ making either judgement.
 - "Just prompt it to be objective" is now measured: it buys you a third
   to a half, and it buys you no honesty about the influence.
 - If you aggregate opinions from multiple models that can see each
-  other's outputs, the loudest/most senior-sounding voice is worth ~2×
-  in the ensemble without anyone deciding that.
+  other's outputs, then — in our setup, at least — the most
+  senior-sounding voice was worth ~2× in the ensemble without anyone
+  deciding that. If that generalises, it's a quiet failure mode for
+  every "panel of experts" architecture.
 - The fix remains structural, and boring, and half a century old:
   don't let estimators see each other before they commit.
   [point.vote](https://point.vote) exists because the redaction rule
