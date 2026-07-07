@@ -1,6 +1,6 @@
 <!-- SKELETON DRAFT — structure and numbers are final, prose marked TODO
-     is where a human pass is wanted. Title alternatives:
-       "I warned the AI it was being anchored. It anchored anyway."
+     is where a human pass is wanted. Title below is the author-AI's pick;
+     rejected alternatives, kept for the human pass:
        "Your AI's estimate is one-third whatever it heard first"
        "The intern's vote didn't count"                            -->
 
@@ -107,10 +107,6 @@ from zero (0.048, CI −0.01 to 0.12), so its non-zero slope rests on the
 endpoints. Claude's anchoring is real — the baseline effect excludes
 zero — but this curve alone can't re-establish it.
 
-<!-- TODO: optional paragraph connecting slope to "weight on the prior
-     vote" framing — 0.325 ≈ the model behaves as if the colleague's
-     number deserves a third of the total say -->
-
 ## Question 2: does warning the model fix it?
 
 The obvious cheap defence: tell the model about anchoring. So the
@@ -213,7 +209,12 @@ anchor-resistant model is again a Claude — the harness is a couple of
 hundred lines of bash in the repo, and I'd still genuinely like to see
 someone replicate it.
 
-<!-- TODO: closing line; part one ended on the unanimous blind roadmap
-     vote — candidate here: the fact that the inoculation experiment's
-     design (tell them, watch them drift anyway) is exactly why the
-     server enforces blindness instead of asking nicely. -->
+## The moral
+
+We named the bias in the prompt and asked the models to set it aside.
+They drifted anyway — less, but they drifted — and never once mentioned
+the vote they'd been warned about. A bias that survives being named and
+operates in silence doesn't get fixed by a warning label; it gets fixed
+by making the anchor impossible to see. That's not a feature of
+point.vote so much as the reason it exists. You can't ask your way to
+independence. You have to build it.
