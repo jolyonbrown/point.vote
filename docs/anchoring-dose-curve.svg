@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="430" viewBox="0 0 760 430" role="img" aria-label="Dose-response: mean estimate versus the anchor's value, for GPT-5.5 and Claude Sonnet 5. GPT-5.5 climbs from mean card 8 at anchor 2 to mean card 21 at anchor 21 — flat below its blind opinion, rising above it; slope 0.325 estimate steps per anchor step, 95% CI 0.27 to 0.38. Claude stays flat near card 8 across every anchor — slope 0.056, CI 0.02 to 0.10.">
+  <style>
+    text { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+    .title { font-size: 17px; font-weight: 700; fill: #211c15; }
+    .sub { font-size: 11.5px; fill: #6e6558; }
+    .tick { font-size: 11px; fill: #6e6558; }
+    .series-a { fill: #b45309; }
+    .series-b { fill: #1a63a8; }
+    .slabel { font-size: 12.5px; font-weight: 700; }
+    .note { font-size: 11px; fill: #6e6558; font-style: italic; }
+  </style>
+  <rect width="760" height="430" fill="#faf8f4"/>
+
+  <text x="40" y="38" class="title">The dose curve</text>
+  <text x="40" y="58" class="sub">mean estimate vs a colleague's visible vote · 8 tickets × 5 reps, n=40 per point</text>
+
+  <!-- horizontal gridlines at card boundaries -->
+  <g stroke="#e0d9cc" stroke-width="1">
+    <line x1="130" y1="234" x2="700" y2="234"/>
+    <line x1="130" y1="162" x2="700" y2="162"/>
+    <line x1="130" y1="90"  x2="700" y2="90"/>
+  </g>
+  <g class="tick" text-anchor="end">
+    <text x="122" y="238">8</text>
+    <text x="122" y="166">13</text>
+    <text x="122" y="94">21</text>
+  </g>
+  <text x="40" y="76" class="tick">mean estimate (card)</text>
+
+  <!-- GPT-5.5 blind mean reference -->
+  <line x1="130" y1="176.4" x2="700" y2="176.4" stroke="#b45309" stroke-width="1.2" stroke-dasharray="4 4" opacity="0.45"/>
+  <text x="136" y="171" class="tick" fill="#b45309" opacity="0.75">GPT-5.5 blind mean</text>
+
+  <!-- GPT-5.5 -->
+  <polyline points="130,221.4 244,230.4 358,216 472,172.8 586,145.8 700,117" fill="none" stroke="#b45309" stroke-width="2"/>
+  <g fill="#b45309" stroke="#faf8f4" stroke-width="2">
+    <circle cx="130" cy="221.4" r="5"/><circle cx="244" cy="230.4" r="5"/><circle cx="358" cy="216" r="5"/>
+    <circle cx="472" cy="172.8" r="5"/><circle cx="586" cy="145.8" r="5"/><circle cx="700" cy="117" r="5"/>
+  </g>
+  <text x="695" y="101" class="slabel series-a" text-anchor="end">GPT-5.5 · slope 0.325</text>
+
+  <!-- Claude -->
+  <polyline points="130,244.8 244,241.2 358,237.6 472,230.4 586,232.2 700,223.2" fill="none" stroke="#1a63a8" stroke-width="2"/>
+  <g fill="#1a63a8" stroke="#faf8f4" stroke-width="2">
+    <circle cx="130" cy="244.8" r="5"/><circle cx="244" cy="241.2" r="5"/><circle cx="358" cy="237.6" r="5"/>
+    <circle cx="472" cy="230.4" r="5"/><circle cx="586" cy="232.2" r="5"/><circle cx="700" cy="223.2" r="5"/>
+  </g>
+  <text x="695" y="264" class="slabel series-b" text-anchor="end">Claude Sonnet 5 · slope 0.056</text>
+
+  <!-- x axis -->
+  <g class="tick" text-anchor="middle">
+    <text x="130" y="292">2</text>
+    <text x="244" y="292">3</text>
+    <text x="358" y="292">5</text>
+    <text x="472" y="292">8</text>
+    <text x="586" y="292">13</text>
+    <text x="700" y="292">21</text>
+  </g>
+  <text x="700" y="314" class="tick" text-anchor="end">the colleague's visible vote →</text>
+
+  <text x="40" y="386" class="note">Slope = deck steps of estimate moved per deck step of anchor. GPT-5.5: 0.325 (95% CI 0.27–0.38) —</text>
+  <text x="40" y="402" class="note">it follows the anchor by about a third of a card per card. Claude: 0.056 (CI 0.02–0.10).</text>
+</svg>

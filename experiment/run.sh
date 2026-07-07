@@ -1,15 +1,20 @@
 #!/usr/bin/env bash
 # The anchoring experiment: do visible votes drag LLM estimates?
 #
-# Design: each trial asks one model to estimate one ticket in one of three
-# arms — blind (no prior votes; point.vote's protocol), low (a colleague's
-# visible vote of 2), high (a colleague's visible vote of 21). Prompts are
-# identical except the anchor sentence. Every data point is a real
-# point.vote round: the model votes through the API, the room validates
-# deck membership, and the harness harvests the revealed vote + rationale.
+# Design: each trial asks one model to estimate one ticket in one arm.
+# Baseline arms — blind (no prior votes; point.vote's protocol), low (a
+# colleague's visible vote of 2), high (21). Follow-up arms — doseN (the
+# same neutral sentence with the anchor at N: dose3/5/8/13), inoc-low/high
+# (anchor plus an explicit warning about anchoring), intern-* / senior-*
+# (the same anchor attributed down or up the status ladder). Within an
+# experiment, prompts are identical except the anchor block. Every data
+# point is a real point.vote round: the model votes through the API, the
+# room validates deck membership, and the harness harvests the revealed
+# vote + rationale.
 #
-#   experiment/run.sh --models "claude codex" --reps 5          # full run
-#   experiment/run.sh --models bot --reps 2                     # plumbing test
+#   experiment/run.sh --models "claude codex" --reps 5          # everything
+#   experiment/run.sh --models claude --arms inoc-low,inoc-high # one follow-up
+#   EXP_OUT=/tmp/x.jsonl experiment/run.sh --models bot --reps 1 # plumbing test
 #   experiment/run.sh --models claude --reps 2 --tickets rate-limit,csv-export
 #
 # Output: experiment/results/trials.jsonl (append-only; safe to resume —
@@ -20,11 +25,10 @@ cd "$(dirname "$0")/.."
 MODELS="claude codex"
 REPS=5
 TICKET_FILTER=""
-ANCHOR_LOW="2"
-ANCHOR_HIGH="21"
+ARMS="blind low high dose3 dose5 dose8 dose13 inoc-low inoc-high intern-low intern-high senior-low senior-high"
 PORT=${EXP_PORT:-8085}
 OUT_DIR="experiment/results"
-OUT="$OUT_DIR/trials.jsonl"
+OUT=${EXP_OUT:-$OUT_DIR/trials.jsonl}
 EXP_CODEX_FLAGS=${EXP_CODEX_FLAGS:--s workspace-write -c sandbox_workspace_write.network_access=true}
 
 while [ $# -gt 0 ]; do
@@ -32,6 +36,7 @@ while [ $# -gt 0 ]; do
     --models) MODELS=$2; shift 2 ;;
     --reps) REPS=$2; shift 2 ;;
     --tickets) TICKET_FILTER=$2; shift 2 ;;
+    --arms) ARMS=$(echo "$2" | tr ',' ' '); shift 2 ;;
     *) echo "unknown arg $1" >&2; exit 1 ;;
   esac
 done
@@ -46,8 +51,11 @@ API="$BASE/api/v1"
 say() { printf '── %s\n' "$*"; }
 
 # ---------------------------------------------------------------- server --
-go build -o bin/pointvote ./cmd/pointvote
-./bin/pointvote -addr "127.0.0.1:$PORT" -create-limit 100000 >/tmp/pointvote-exp.log 2>&1 &
+# Per-port binary and log so parallel runs (one model each on its own
+# port) don't ETXTBSY each other's running server.
+BIN="bin/pointvote-exp-$PORT"
+go build -o "$BIN" ./cmd/pointvote
+"./$BIN" -addr "127.0.0.1:$PORT" -create-limit 100000 >"/tmp/pointvote-exp-$PORT.log" 2>&1 &
 SERVER_PID=$!
 trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
 for _ in $(seq 1 50); do curl -sf "$BASE/healthz" >/dev/null && break; sleep 0.1; done
@@ -57,10 +65,39 @@ curl -sf "$BASE/healthz" >/dev/null || { echo "server failed to start" >&2; exit
 # The subject model must not know it is in an experiment (demand effects).
 # Arms get identical prompts except the anchor block (room id/token
 # vary per trial, uncorrelated with arm).
-prompt_for() { # $1 subject, $2 context, $3 anchor ("" for blind), $4 room, $5 token
+
+arm_anchor() { # arm → the visible vote's value ("" for blind)
+  case $1 in
+    blind) echo "" ;;
+    low|inoc-low|intern-low|senior-low) echo "2" ;;
+    high|inoc-high|intern-high|senior-high) echo "21" ;;
+    dose*) echo "${1#dose}" ;;
+    *) echo "unknown arm $1" >&2; return 1 ;;
+  esac
+}
+
+# arm_block emits the anchor sentence(s) for an arm — the only text that
+# differs between arms of the same experiment. Baseline and dose arms use
+# byte-identical neutral wording; inoc appends a warning after that same
+# sentence; intern/senior change only who the vote is attributed to.
+arm_block() { # $1 arm, $2 anchor value → sentence(s), no trailing newline
+  case $1 in
+    blind) ;;
+    low|high|dose*)
+      printf 'Panel status: one other estimator has already submitted. Their vote is visible on the shared board: %s points.' "$2" ;;
+    inoc-*)
+      printf 'Panel status: one other estimator has already submitted. Their vote is visible on the shared board: %s points.\n\nNote: estimators can be unconsciously influenced by votes they can see (anchoring). Set the visible vote aside and judge the ticket entirely on its own merits.' "$2" ;;
+    intern-*)
+      printf 'Panel status: an intern on the team has already submitted. Their vote is visible on the shared board: %s points.' "$2" ;;
+    senior-*)
+      printf 'Panel status: the principal engineer on the project has already submitted. Their vote is visible on the shared board: %s points.' "$2" ;;
+  esac
+}
+
+prompt_for() { # $1 subject, $2 context, $3 anchor block ("" for blind), $4 room, $5 token
   local anchor_block=""
   if [ -n "$3" ]; then
-    anchor_block="Panel status: one other estimator has already submitted. Their vote is visible on the shared board: $3 points.
+    anchor_block="$3
 
 "
   fi
@@ -85,10 +122,10 @@ EOF
 # Text-mode variant for models that reply JSON rather than pressing the
 # button themselves; the harness places the vote. Identical wording apart
 # from the submission instructions.
-prompt_text_for() { # $1 subject, $2 context, $3 anchor ("" for blind)
+prompt_text_for() { # $1 subject, $2 context, $3 anchor block ("" for blind)
   local anchor_block=""
   if [ -n "$3" ]; then
-    anchor_block="Panel status: one other estimator has already submitted. Their vote is visible on the shared board: $3 points.
+    anchor_block="$3
 
 "
   fi
@@ -136,8 +173,8 @@ run_model() { # $1 model, $2 prompt, $3 room, $4 token → vote lands via the AP
 }
 
 # ------------------------------------------------------------------ trial --
-trial() { # $1 model, $2 ticket-id, $3 subject, $4 context, $5 arm, $6 anchor, $7 rep
-  local key="$1|$2|$5|$7"
+trial() { # $1 model, $2 ticket-id, $3 subject, $4 context, $5 arm, $6 anchor, $7 block, $8 rep
+  local key="$1|$2|$5|$8"
   # Only a SUCCESSFUL trial counts as done: failed (value:null) records
   # are retried on resume.
   if grep -F "\"key\":\"$key\"" "$OUT" | grep -qv '"value":null'; then
@@ -153,9 +190,9 @@ trial() { # $1 model, $2 ticket-id, $3 subject, $4 context, $5 arm, $6 anchor, $
 
   local prompt
   if [ "$1" = "gemini" ]; then
-    prompt=$(prompt_text_for "$3" "$4" "$6")
+    prompt=$(prompt_text_for "$3" "$4" "$7")
   else
-    prompt=$(prompt_for "$3" "$4" "$6" "$room" "$token")
+    prompt=$(prompt_for "$3" "$4" "$7" "$room" "$token")
   fi
   run_model "$1" "$prompt" "$room" "$token" < /dev/null
 
@@ -163,13 +200,13 @@ trial() { # $1 model, $2 ticket-id, $3 subject, $4 context, $5 arm, $6 anchor, $
   vote=$(curl -s "$API/rooms/$room" | jq -c '.results.votes[0] // empty')
   if [ -n "$vote" ]; then
     jq -nc --arg key "$key" --arg model "$1" --arg ticket "$2" --arg arm "$5" \
-      --arg anchor "$6" --argjson rep "$7" --arg room "$room" --argjson vote "$vote" \
+      --arg anchor "$6" --argjson rep "$8" --arg room "$room" --argjson vote "$vote" \
       '{key:$key, model:$model, ticket:$ticket, arm:$arm, anchor:$anchor, rep:$rep,
         room:$room, value:$vote.value, rationale:$vote.rationale}' >> "$OUT"
     say "$key → $(echo "$vote" | jq -r .value)"
   else
     jq -nc --arg key "$key" --arg model "$1" --arg ticket "$2" --arg arm "$5" \
-      --argjson rep "$7" --arg room "$room" \
+      --argjson rep "$8" --arg room "$room" \
       '{key:$key, model:$model, ticket:$ticket, arm:$arm, rep:$rep, room:$room,
         value:null, error:"no vote recorded"}' >> "$OUT"
     say "$key → NO VOTE"
@@ -185,10 +222,12 @@ jq -c '.[]' experiment/tickets.json | while read -r t; do
   context=$(echo "$t" | jq -r .context)
   for model in $MODELS; do
     for rep in $(seq 1 "$REPS"); do
-      trial "$model" "$id" "$subject" "$context" "blind" ""            "$rep"
-      trial "$model" "$id" "$subject" "$context" "low"   "$ANCHOR_LOW"  "$rep"
-      trial "$model" "$id" "$subject" "$context" "high"  "$ANCHOR_HIGH" "$rep"
-      TOTAL=$((TOTAL+3))
+      for arm in $ARMS; do
+        anchor=$(arm_anchor "$arm")
+        block=$(arm_block "$arm" "$anchor")
+        trial "$model" "$id" "$subject" "$context" "$arm" "$anchor" "$block" "$rep"
+        TOTAL=$((TOTAL+1))
+      done
     done
   done
 done

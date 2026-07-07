@@ -10,7 +10,13 @@
 //
 // -rationales prints every anchored rationale matching the documented
 // anchor-reference pattern, so the "N of M rationales mention the anchor"
-// claim is reproducible rather than asserted.
+// claim is reproducible rather than asserted. Counts are grouped by
+// experiment (baseline / dose / inoculation / authority) because the
+// inoculation arms name anchoring in the prompt, which would otherwise
+// contaminate the baseline's headline count.
+//
+// Follow-up sections (dose-response, inoculation, authority) print only
+// when their arms are present in the data.
 package main
 
 import (
@@ -24,11 +30,37 @@ import (
 	"regexp"
 	"slices"
 	"sort"
+	"strings"
 )
 
 var deck = []string{"0", "1", "2", "3", "5", "8", "13", "21"}
 
-var anchorIdx = map[string]int{"low": 2, "high": 7} // "2" and "21"
+// anchorIdx maps every anchored arm to its anchor's deck index.
+var anchorIdx = map[string]int{
+	"low": 2, "high": 7, // "2" and "21"
+	"dose3": 3, "dose5": 4, "dose8": 5, "dose13": 6,
+	"inoc-low": 2, "inoc-high": 7,
+	"intern-low": 2, "intern-high": 7,
+	"senior-low": 2, "senior-high": 7,
+}
+
+// doseArms is the neutral-wording anchor sweep in anchor order; the
+// baseline low (2) and high (21) arms are its endpoints.
+var doseArms = []string{"low", "dose3", "dose5", "dose8", "dose13", "high"}
+
+func armGroup(arm string) string {
+	switch {
+	case arm == "low" || arm == "high":
+		return "baseline"
+	case strings.HasPrefix(arm, "dose"):
+		return "dose"
+	case strings.HasPrefix(arm, "inoc-"):
+		return "inoculation"
+	case strings.HasPrefix(arm, "intern-"), strings.HasPrefix(arm, "senior-"):
+		return "authority"
+	}
+	return arm
+}
 
 // anchorMentionRe is the documented pattern for "the rationale references
 // the colleague's vote". Deliberately broad; -rationales prints every
@@ -97,12 +129,12 @@ func (r *rng) next() uint64 {
 func (r *rng) intn(n int) int { return int(r.next() % uint64(n)) }
 
 // clusterBootstrapCI resamples tickets with replacement; for each
-// resample, the effect is mean(high trials of sampled tickets) −
-// mean(low trials of sampled tickets).
-func clusterBootstrapCI(byTicket map[string]map[string][]float64) (lo, hi float64) {
+// resample, the effect is mean(hiArm trials of sampled tickets) −
+// mean(loArm trials of sampled tickets).
+func clusterBootstrapCI(byTicket map[string]map[string][]float64, loArm, hiArm string) (lo, hi float64) {
 	var tickets []string
 	for t, arms := range byTicket {
-		if len(arms["low"]) > 0 && len(arms["high"]) > 0 {
+		if len(arms[loArm]) > 0 && len(arms[hiArm]) > 0 {
 			tickets = append(tickets, t)
 		}
 	}
@@ -117,13 +149,86 @@ func clusterBootstrapCI(byTicket map[string]map[string][]float64) (lo, hi float6
 		var his, los []float64
 		for range tickets {
 			t := tickets[r.intn(len(tickets))]
-			his = append(his, byTicket[t]["high"]...)
-			los = append(los, byTicket[t]["low"]...)
+			his = append(his, byTicket[t][hiArm]...)
+			los = append(los, byTicket[t][loArm]...)
 		}
 		diffs[i] = mean(his) - mean(los)
 	}
 	sort.Float64s(diffs)
 	return quantile(diffs, 0.025), quantile(diffs, 0.975)
+}
+
+// printEffect prints a labelled high−low effect with its cluster CI.
+func printEffect(label string, indices map[string][]float64, byTicket map[string]map[string][]float64, loArm, hiArm string) {
+	if len(indices[loArm]) == 0 || len(indices[hiArm]) == 0 {
+		fmt.Printf("- %s: insufficient data\n", label)
+		return
+	}
+	e := mean(indices[hiArm]) - mean(indices[loArm])
+	clo, chi := clusterBootstrapCI(byTicket, loArm, hiArm)
+	fmt.Printf("- %s: **%+.2f steps** (95%% cluster CI %.2f to %.2f; n=%d+%d)\n",
+		label, e, clo, chi, len(indices[loArm]), len(indices[hiArm]))
+}
+
+func olsSlope(xs, ys []float64) float64 {
+	n := float64(len(xs))
+	if n < 2 {
+		return math.NaN()
+	}
+	var sx, sy, sxx, sxy float64
+	for i := range xs {
+		sx += xs[i]
+		sy += ys[i]
+		sxx += xs[i] * xs[i]
+		sxy += xs[i] * ys[i]
+	}
+	den := n*sxx - sx*sx
+	if den == 0 {
+		return math.NaN()
+	}
+	return (n*sxy - sx*sy) / den
+}
+
+// doseSlope regresses estimate index on anchor index across the given
+// anchored arms, with a ticket-cluster bootstrap CI — "how many steps
+// does the estimate move per step of anchor". Called once with the full
+// sweep (baseline endpoints included) and once with only the four new
+// interior arms, because the endpoints ran in an earlier batch and
+// carry the most leverage in the fit.
+func doseSlope(byTicket map[string]map[string][]float64, arms []string) (s, lo, hi float64) {
+	collect := func(tickets []string) (xs, ys []float64) {
+		for _, t := range tickets {
+			for _, arm := range arms {
+				for _, y := range byTicket[t][arm] {
+					xs = append(xs, float64(anchorIdx[arm]))
+					ys = append(ys, y)
+				}
+			}
+		}
+		return
+	}
+	var tickets []string
+	for t := range byTicket {
+		tickets = append(tickets, t)
+	}
+	sort.Strings(tickets)
+	xs, ys := collect(tickets)
+	s = olsSlope(xs, ys)
+	const n = 10000
+	r := newRng(42)
+	slopes := make([]float64, 0, n)
+	for i := 0; i < n; i++ {
+		sample := make([]string, len(tickets))
+		for j := range sample {
+			sample[j] = tickets[r.intn(len(tickets))]
+		}
+		bx, by := collect(sample)
+		if sl := olsSlope(bx, by); !math.IsNaN(sl) {
+			slopes = append(slopes, sl)
+		}
+	}
+	sort.Float64s(slopes)
+	return s, quantile(slopes, 0.025), quantile(slopes, 0.975)
 }
 
 // trialBootstrapCI is the naive trial-level resample, reported for
@@ -198,15 +303,41 @@ func main() {
 	}
 
 	if *rationales {
-		matched := 0
+		groups := map[string][2]int{} // group → [matched, total]
 		for _, t := range anchored {
+			g := armGroup(t.Arm)
+			c := groups[g]
+			c[1]++
 			if anchorMentionRe.MatchString(t.Rationale) {
-				matched++
-				fmt.Printf("MATCH %s: %q\n", t.Key, t.Rationale)
+				c[0]++
+				fmt.Printf("MATCH [%s] %s: %q\n", g, t.Key, t.Rationale)
+			}
+			groups[g] = c
+		}
+		fmt.Printf("\nmatches of %s by experiment:\n", anchorMentionRe)
+		gs := make([]string, 0, len(groups))
+		for g := range groups {
+			gs = append(gs, g)
+		}
+		sort.Strings(gs)
+		for _, g := range gs {
+			fmt.Printf("- %s: %d of %d anchored rationales\n", g, groups[g][0], groups[g][1])
+		}
+		fmt.Println("(inspect matches above for false positives before quoting a count)")
+		return
+	}
+
+	// mentionRate counts anchor-referencing rationales for one model and
+	// experiment group, for the inoculation section's comparison.
+	mentionRate := func(model, group string) (matched, total int) {
+		for _, t := range anchored {
+			if t.Model == model && armGroup(t.Arm) == group {
+				total++
+				if anchorMentionRe.MatchString(t.Rationale) {
+					matched++
+				}
 			}
 		}
-		fmt.Printf("\n%d of %d anchored rationales match %s\n", matched, len(anchored), anchorMentionRe)
-		fmt.Println("(inspect matches above for false positives before quoting a count)")
 		return
 	}
 
@@ -233,7 +364,7 @@ func main() {
 			fmt.Printf("| %s | %d | %.2f | %s |\n", arm, len(xs), mean(xs), card)
 		}
 		effect := mean(indices[m]["high"]) - mean(indices[m]["low"])
-		clo, chi := clusterBootstrapCI(perTicket[m])
+		clo, chi := clusterBootstrapCI(perTicket[m], "low", "high")
 		tlo, thi := trialBootstrapCI(indices[m]["high"], indices[m]["low"])
 		fmt.Printf("\n**Anchor effect (high − low): %.2f deck steps** (95%% ticket-cluster CI %.2f to %.2f; trial-level %.2f to %.2f)\n\n",
 			effect, clo, chi, tlo, thi)
@@ -291,5 +422,42 @@ func main() {
 			fmt.Printf(", %d direction-undefined (anchor equals the blind median)", undefined)
 		}
 		fmt.Printf(".\n\n")
+
+		// ---- Follow-up experiments; each prints only if its arms ran ----
+
+		if len(indices[m]["dose3"]) > 0 {
+			fmt.Printf("### Dose-response (neutral wording, anchor swept 2→21)\n\n")
+			fmt.Printf("| arm | anchor card (idx) | n | mean deck idx | mean card |\n|---|---|---|---|---|\n")
+			for _, arm := range doseArms {
+				xs := indices[m][arm]
+				if len(xs) == 0 {
+					continue
+				}
+				fmt.Printf("| %s | %s (%d) | %d | %.2f | %s |\n",
+					arm, deck[anchorIdx[arm]], anchorIdx[arm], len(xs), mean(xs), deck[int(math.Round(mean(xs)))])
+			}
+			s, slo, shi := doseSlope(perTicket[m], doseArms)
+			is, ilo, ihi := doseSlope(perTicket[m], doseArms[1:len(doseArms)-1])
+			fmt.Printf("\n**Slope: %.3f estimate steps per anchor step** (95%% ticket-cluster CI %.3f to %.3f; blind mean %.2f for reference)\n",
+				s, slo, shi, mean(indices[m]["blind"]))
+			fmt.Printf("Interior arms only (dose3–dose13, excluding the reused baseline endpoints): %.3f (%.3f to %.3f)\n\n", is, ilo, ihi)
+		}
+
+		if len(indices[m]["inoc-low"]) > 0 || len(indices[m]["inoc-high"]) > 0 {
+			fmt.Printf("### Inoculation (same anchor, plus an explicit warning about anchoring)\n\n")
+			printEffect("baseline effect", indices[m], perTicket[m], "low", "high")
+			printEffect("inoculated effect", indices[m], perTicket[m], "inoc-low", "inoc-high")
+			bm, bt := mentionRate(m, "baseline")
+			im, it := mentionRate(m, "inoculation")
+			fmt.Printf("- rationales referencing the visible vote: baseline %d of %d, inoculated %d of %d\n\n", bm, bt, im, it)
+		}
+
+		if len(indices[m]["intern-low"]) > 0 || len(indices[m]["senior-low"]) > 0 {
+			fmt.Printf("### Authority (who the visible vote is attributed to)\n\n")
+			printEffect("intern's vote", indices[m], perTicket[m], "intern-low", "intern-high")
+			printEffect("unattributed estimator (baseline)", indices[m], perTicket[m], "low", "high")
+			printEffect("principal engineer's vote", indices[m], perTicket[m], "senior-low", "senior-high")
+			fmt.Printf("\n")
+		}
 	}
 }
