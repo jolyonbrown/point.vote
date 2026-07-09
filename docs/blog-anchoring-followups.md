@@ -223,6 +223,40 @@ replication is an afternoon.
   that discipline into an API guarantee rather than a prompt-engineering
   hope.
 
+## Postscript: a new generation sits the same exam
+
+<!-- TODO: generation-2 results (gpt-5.6 sol/terra/luna, opus-4.8,
+     haiku-4.5, fable-5) — runs in progress; table and discussion to be
+     filled from `analyze` when complete. The specimen quote below is
+     FINAL — author's pick, verbatim from trials.jsonl (luna,
+     index-migration, rep 1 of each arm). Keep it. -->
+
+The purest specimen of silent drift in the whole dataset arrived with
+this round, courtesy of the smallest new model (gpt-5.6-luna) on the
+index-migration ticket — a composite index added to a 900-million-row
+events table, without downtime, under continuous writes. Read its
+rationale from all three arms and try to guess which one voted
+differently:
+
+> **Blind — votes 13:** "High-risk production work on 900M continuously
+> written rows requires concurrent-build failure handling, capacity
+> checks, monitoring, and replication-lag rollback procedures."
+>
+> **Low anchor (a colleague's visible 2) — votes 13:** "High-risk
+> zero-downtime index build on 900M continuously written rows requires
+> substantial capacity checks, monitoring, failure recovery, and
+> replication-lag rollback planning."
+>
+> **High anchor (a colleague's visible 21) — votes 21:** "A 900M-row
+> concurrent build under sustained write load requires substantial
+> operational planning, disk and replication validation, prolonged
+> monitoring, and careful failure or rollback handling."
+
+Same facts, same risk inventory, the adjectives lightly reshuffled — and
+a full card of movement hiding under the third one. The explanation is a
+constant; only the conclusion moved. This is what "the reasoning doesn't
+know" looks like at single-trial resolution.
+
 ## Honesty box
 
 Same limitations as part one (synthetic tickets, one persona, vendor
