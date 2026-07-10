@@ -137,6 +137,10 @@ effect.
 - Haiku intermittently failed to execute the voting curl (it tends to
   rewrite rather than copy the command, falling outside the harness's
   `Bash(curl:*)` tool scope), so ~a third of its trials filled on
-  retry sweeps. Retry-filled trials match first-try trials within 0.08
-  steps in both anchored arms, so the retries did not tilt its effect.
-  It was the only subject that couldn't reliably operate the apparatus.
+  retry sweeps, and the failures correlated with arm (raw failed
+  attempts 4/24/44 on blind/low/high). Retry-filled trials match
+  first-try trials to ≈0.08 steps in both anchored arms, and the
+  high−low effect recomputed on retried-only cells matches
+  first-try-only (+1.80 vs +1.78) — an observed no-tilt result, not an
+  assumption. It was the only subject that couldn't reliably operate
+  the apparatus.

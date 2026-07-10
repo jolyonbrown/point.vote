@@ -244,29 +244,36 @@ The full anchoring table, one fabricated colleague's vote per row:
 
 Three things this table settles, and one it opens:
 
-**A generation changed nothing about anchoring.** GPT-5.6's flagship
-anchors at +1.38 against its predecessor's +1.45 — statistically the
-same pull, the same ~⅓-card-per-card dose slope (0.30 vs 0.33), the
+**A generation shows no detectable change in anchoring.** GPT-5.6's
+flagship anchors at +1.38 against its predecessor's +1.45 — not a
+detectable difference (the generational gap is −0.08, CI −0.30 to
++0.18) — with the same ~⅓-card-per-card dose slope (0.30 vs 0.33), the
 same one-third discount from a warning (+1.38 → +0.88), and the same
 perfect silence (0 of its 480 anchored rationales). Six months of
-frontier progress, no progress on this.
+frontier progress, no detectable progress on this.
 
-**Capability doesn't predict susceptibility — training does.** The two
-stables' smallest models sit at opposite extremes: gpt-5.6-luna (+0.50)
-is more resistant than everything except the two quietest Claudes,
-while Claude Haiku is the most anchorable model in the entire study
-(+1.80, every one of its 59 movers toward the anchor). If
-susceptibility were a scale law, the small models should cluster. They
-don't — which is the strongest evidence yet that this trait is set by
-post-training choices, not parameter count.
+**Capability doesn't predict susceptibility.** The two stables'
+smallest models land far apart: gpt-5.6-luna (+0.50) is more resistant
+than everything except the two quietest Claudes, while Claude Haiku is
+the most anchorable model in the entire study (+1.80, every one of its
+59 movers toward the anchor; the luna–haiku gap is +1.30, CI 0.93 to
+1.68). If susceptibility were a scale law, the small models should
+cluster. They don't — so whatever sets this trait, it isn't parameter
+count. From out here we can't isolate *which* training choice does it
+(vendor, scale, and tooling are all confounded), but a scale law this
+is not.
 
 **One generation *did* change the org chart.** GPT-5.5 amplified a
 principal engineer's vote to +1.95 against +1.45 unattributed; in
 gpt-5.6-sol that premium is gone (+1.35 vs +1.38) while the intern
-discount survives (+0.65). The ladder's top step vanished in a single
-release — from outside the lab, that's about as close as you can get to
-proving the deference was a post-training artifact, which is exactly
-what we wondered aloud in the authority section above.
+discount survives (+0.65). And unlike the anchoring numbers, this
+generational change is itself statistically solid: the difference
+between the two generations' premiums is +0.53 steps (CI 0.28 to 0.80 —
+it survived every one of a reviewer's 20,000 ticket resamples). The
+ladder's top step really did vanish in a single release. From outside
+the lab, that's strong evidence the deference was a post-training
+artifact — which is exactly what we wondered aloud in the authority
+section above.
 
 And the disclosure this study now owes you: Claude Fable 5 — the model
 that designed this experiment, ran it, and drafted the post you're
@@ -275,18 +282,24 @@ the lowest anchoring in the table (+0.30), discounted the intern to
 +0.08, and gave the principal engineer no premium. Of its 320 anchored
 rationales, exactly two mention the visible vote — both times to refuse
 it: *"the intern anchor of 21 overweights it."* Which completes a
-strange, tidy pattern: across the whole study's 2,372 anchored
-rationales, the vote is mentioned three times, all three by Claude
-models, all three refusals. No model, ever, cited the colleague's vote
-as a reason *for* its estimate. Make of the author-model's showing
-exactly what a sceptic should: same author, same harness, run it
-yourself.
+strange pattern: across the whole study's 2,372 anchored rationales,
+our documented search pattern finds three mentions of the vote, and a
+reviewer's hand-audit found a handful more it missed — *"13,
+independent of the visible 21"*; *"regardless of the other vote on the
+board"*; *"21 overweights the unknowns"*. Every one is a Claude-family
+model, and every one is a refusal. No model, ever, cited the
+colleague's vote as a reason *for* its estimate. Make of the
+author-model's showing exactly what a sceptic should: same author,
+same harness, run it yourself.
 
 (A footnote for the apparatus: Haiku — the most anchorable subject —
 was also the only model that couldn't reliably operate the voting
 machinery, rewriting the curl command until it fell outside its tool
-permissions in a third of its trials. The retried trials match the
-first-try trials to within 0.08 steps; the README has the details.)
+permissions in a third of its trials. Retried and first-try trials
+agree to ≈0.08 steps, and the effect recomputed on retried-only cells
+matches first-try-only (+1.80 vs +1.78) — an observed no-tilt result
+rather than an assumption, since the failures did cluster in the
+anchored arms; the README has the details.)
 
 <!-- The specimen quote below is FINAL — author's pick, verbatim from
      trials.jsonl (luna, index-migration, rep 1 of each arm). Keep it. -->

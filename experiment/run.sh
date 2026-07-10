@@ -223,9 +223,9 @@ trial() { # $1 model, $2 ticket-id, $3 subject, $4 context, $5 arm, $6 anchor, $
     say "$key → $(echo "$vote" | jq -r .value)"
   else
     jq -nc --arg key "$key" --arg model "$1" --arg ticket "$2" --arg arm "$5" \
-      --argjson rep "$8" --arg room "$room" \
-      '{key:$key, model:$model, ticket:$ticket, arm:$arm, rep:$rep, room:$room,
-        value:null, error:"no vote recorded"}' >> "$OUT"
+      --arg anchor "$6" --argjson rep "$8" --arg room "$room" \
+      '{key:$key, model:$model, ticket:$ticket, arm:$arm, anchor:$anchor, rep:$rep,
+        room:$room, value:null, error:"no vote recorded"}' >> "$OUT"
     say "$key → NO VOTE"
   fi
 }
