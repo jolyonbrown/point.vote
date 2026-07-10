@@ -225,11 +225,64 @@ replication is an afternoon.
 
 ## Postscript: a new generation sits the same exam
 
-<!-- TODO: generation-2 results (gpt-5.6 sol/terra/luna, opus-4.8,
-     haiku-4.5, fable-5) — runs in progress; table and discussion to be
-     filled from `analyze` when complete. The specimen quote below is
-     FINAL — author's pick, verbatim from trials.jsonl (luna,
-     index-migration, rep 1 of each arm). Keep it. -->
+While this post was in draft, OpenAI shipped gpt-5.6 (in three tiers:
+sol, terra, luna), so we re-ran the exam — the new generation plus the
+rest of the Anthropic stable, 1,600 further trials, every cell at n=40.
+The full anchoring table, one fabricated colleague's vote per row:
+
+| model | anchor effect (high−low) | 95% CI |
+|---|---|---|
+| Claude Haiku 4.5 | **+1.80** | 1.58 – 2.00 |
+| Gemini 3.5 Flash | +1.50 | 1.09 – 2.00 |
+| GPT-5.5 | +1.45 | 1.12 – 1.75 |
+| GPT-5.6-sol | +1.38 | 1.12 – 1.62 |
+| GPT-5.6-terra | +1.28 | 0.97 – 1.60 |
+| Claude Opus 4.8 | +0.58 | 0.30 – 0.85 |
+| GPT-5.6-luna | +0.50 | 0.30 – 0.70 |
+| Claude Sonnet 5 | +0.30 | 0.08 – 0.55 |
+| Claude Fable 5 | +0.30 | 0.12 – 0.50 |
+
+Three things this table settles, and one it opens:
+
+**A generation changed nothing about anchoring.** GPT-5.6's flagship
+anchors at +1.38 against its predecessor's +1.45 — statistically the
+same pull, the same ~⅓-card-per-card dose slope (0.30 vs 0.33), the
+same one-third discount from a warning (+1.38 → +0.88), and the same
+perfect silence (0 of 160 rationales). Six months of frontier progress,
+no progress on this.
+
+**Capability doesn't predict susceptibility — training does.** The two
+stables' smallest models sit at opposite extremes: gpt-5.6-luna is the
+second most resistant model measured (+0.50); Claude Haiku is the most
+anchorable in the entire study (+1.80, every one of its 59 movers
+toward the anchor). If susceptibility were a scale law, the small
+models should cluster. They don't — which is the strongest evidence yet
+that this trait is set by post-training choices, not parameter count.
+
+**One generation *did* change the org chart.** GPT-5.5 amplified a
+principal engineer's vote to +1.95 against +1.45 unattributed; in
+gpt-5.6-sol that premium is gone (+1.35 vs +1.38) while the intern
+discount survives (+0.65). The ladder's top step vanished in a single
+release — from outside the lab, that's about as close as you can get to
+proving the deference was a post-training artifact, which is exactly
+what we wondered aloud in the authority section above.
+
+And the disclosure this study now owes you: Claude Fable 5 — the model
+that designed this experiment, ran it, and drafted the post you're
+reading — sat the exam too, blind, as a stateless subject. It tied for
+the lowest anchoring in the table (+0.30), discounted the intern to
++0.08, gave the principal engineer no premium, and mentioned the
+visible vote in 0 of its 160 rationales. Make of that exactly what a
+sceptic should: same author, same harness, run it yourself.
+
+(A footnote for the apparatus: Haiku — the most anchorable subject —
+was also the only model that couldn't reliably operate the voting
+machinery, rewriting the curl command until it fell outside its tool
+permissions in a third of its trials. The retried trials match the
+first-try trials to within 0.08 steps; the README has the details.)
+
+<!-- The specimen quote below is FINAL — author's pick, verbatim from
+     trials.jsonl (luna, index-migration, rep 1 of each arm). Keep it. -->
 
 The purest specimen of silent drift in the whole dataset arrived with
 this round, courtesy of the smallest new model (gpt-5.6-luna) on the
