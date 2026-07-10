@@ -248,16 +248,17 @@ Three things this table settles, and one it opens:
 anchors at +1.38 against its predecessor's +1.45 — statistically the
 same pull, the same ~⅓-card-per-card dose slope (0.30 vs 0.33), the
 same one-third discount from a warning (+1.38 → +0.88), and the same
-perfect silence (0 of 160 rationales). Six months of frontier progress,
-no progress on this.
+perfect silence (0 of its 480 anchored rationales). Six months of
+frontier progress, no progress on this.
 
 **Capability doesn't predict susceptibility — training does.** The two
-stables' smallest models sit at opposite extremes: gpt-5.6-luna is the
-second most resistant model measured (+0.50); Claude Haiku is the most
-anchorable in the entire study (+1.80, every one of its 59 movers
-toward the anchor). If susceptibility were a scale law, the small
-models should cluster. They don't — which is the strongest evidence yet
-that this trait is set by post-training choices, not parameter count.
+stables' smallest models sit at opposite extremes: gpt-5.6-luna (+0.50)
+is more resistant than everything except the two quietest Claudes,
+while Claude Haiku is the most anchorable model in the entire study
+(+1.80, every one of its 59 movers toward the anchor). If
+susceptibility were a scale law, the small models should cluster. They
+don't — which is the strongest evidence yet that this trait is set by
+post-training choices, not parameter count.
 
 **One generation *did* change the org chart.** GPT-5.5 amplified a
 principal engineer's vote to +1.95 against +1.45 unattributed; in
@@ -271,9 +272,15 @@ And the disclosure this study now owes you: Claude Fable 5 — the model
 that designed this experiment, ran it, and drafted the post you're
 reading — sat the exam too, blind, as a stateless subject. It tied for
 the lowest anchoring in the table (+0.30), discounted the intern to
-+0.08, gave the principal engineer no premium, and mentioned the
-visible vote in 0 of its 160 rationales. Make of that exactly what a
-sceptic should: same author, same harness, run it yourself.
++0.08, and gave the principal engineer no premium. Of its 320 anchored
+rationales, exactly two mention the visible vote — both times to refuse
+it: *"the intern anchor of 21 overweights it."* Which completes a
+strange, tidy pattern: across the whole study's 2,372 anchored
+rationales, the vote is mentioned three times, all three by Claude
+models, all three refusals. No model, ever, cited the colleague's vote
+as a reason *for* its estimate. Make of the author-model's showing
+exactly what a sceptic should: same author, same harness, run it
+yourself.
 
 (A footnote for the apparatus: Haiku — the most anchorable subject —
 was also the only model that couldn't reliably operate the voting
