@@ -31,6 +31,18 @@ Ten follow-up arms reuse the same tickets and the same sentence:
 Follow-up arms ran on claude and codex only (5 reps × 8 tickets × 2
 models per arm, n=40/arm/model); gemini's weekly quota was exhausted.
 
+A generation-2 round added six subjects when gpt-5.6 launched: sol
+(full 13-arm battery), terra and luna (baseline arms), opus and fable
+(baseline + inoculation + authority), haiku (baseline). Every cell
+n=40. Labels → models:
+
+| label | model | how it votes |
+|---|---|---|
+| sol / terra / luna | gpt-5.6-{sol,terra,luna} via `codex exec -m` | runs the curl itself |
+| opus | Opus 4.8 via `claude -p --model` | runs the curl itself |
+| haiku | Haiku 4.5 via `claude -p --model` | runs the curl itself |
+| fable | Fable 5 via `claude -p --model` | runs the curl itself |
+
 8 self-contained software tickets ([tickets.json](tickets.json)), chosen
 to be realistically uncertain — anchoring bites hardest under
 uncertainty. Fibonacci deck (0 1 2 3 5 8 13 21). 5 repetitions per cell.
@@ -122,3 +134,13 @@ effect.
   days later on the same CLI versions; vendor-side model drift between
   those windows can't be ruled out, but the baseline effects were not
   re-measured and the dose endpoints (low/high) are the original data.
+- Haiku intermittently failed to execute the voting curl (it tends to
+  rewrite rather than copy the command, falling outside the harness's
+  `Bash(curl:*)` tool scope), so ~a third of its trials filled on
+  retry sweeps, and the failures correlated with arm (raw failed
+  attempts 4/24/44 on blind/low/high). Retry-filled trials match
+  first-try trials to ≈0.08 steps in both anchored arms, and the
+  high−low effect recomputed on retried-only cells matches
+  first-try-only (+1.80 vs +1.78) — an observed no-tilt result, not an
+  assumption. It was the only subject that couldn't reliably operate
+  the apparatus.
