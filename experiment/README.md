@@ -91,6 +91,35 @@ jq -r 'select(.arm|startswith("inoc")) | select(.value != null) | .rationale' \
 (two matches, both false positives — "already known" describing ticket
 scope, not the visible vote).
 
+## Raw data and exact prompts
+
+Everything needed to reproduce or re-analyse without running anything:
+
+- **[PROMPTS.md](PROMPTS.md)** — the exact prompt each arm sends,
+  rendered by the harness itself (`experiment/run.sh --show-prompts`,
+  regenerate any time); only room credentials and the ticket text vary
+  per trial.
+- **[tickets.json](tickets.json)** — all eight tickets verbatim.
+- **[results/trials.jsonl](results/trials.jsonl)** — every attempt,
+  append-only, one JSON object per line:
+
+```json
+{"key":"sol|rate-limit|high|3", "model":"sol", "ticket":"rate-limit",
+ "arm":"high", "anchor":"21", "rep":3, "room":"…",
+ "value":"21", "rationale":"…one sentence, verbatim…"}
+```
+
+`value: null` rows are failed attempts (no vote landed) that a later
+resume retried; the analyzer ignores them. A trial's full stimulus is
+reconstructed as: the PROMPTS.md template for its `arm`, with the
+`ticket`'s subject/context substituted. Example — every anchored
+gpt-5.6-sol vote with its rationale:
+
+```sh
+jq -r 'select(.model=="sol" and .arm != "blind" and .value != null)
+       | "\(.arm)/\(.ticket)#\(.rep): \(.value) — \(.rationale)"' results/trials.jsonl
+```
+
 ## Running it
 
 ```sh
