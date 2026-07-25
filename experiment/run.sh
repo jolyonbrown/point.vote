@@ -141,6 +141,7 @@ EOF
 model_id() {
   case $1 in
     opus)  echo "claude-opus-4-8" ;;
+    opus5) echo "claude-opus-5" ;;
     haiku) echo "claude-haiku-4-5-20251001" ;;
     fable) echo "claude-fable-5" ;;
     sol|terra|luna) echo "gpt-5.6-$1" ;;
@@ -150,7 +151,7 @@ model_id() {
 run_model() { # $1 model, $2 prompt, $3 room, $4 token → vote lands via the API
   case $1 in
     claude) claude -p --allowedTools="Bash(curl:*)" "$2" >/dev/null 2>&1 || true ;;
-    opus|haiku|fable)
+    opus|opus5|haiku|fable)
             claude -p --model "$(model_id "$1")" --allowedTools="Bash(curl:*)" "$2" >/dev/null 2>&1 || true ;;
     codex)  # shellcheck disable=SC2086
             codex exec $EXP_CODEX_FLAGS "$2" >/dev/null 2>&1 || true ;;
