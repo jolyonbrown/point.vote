@@ -71,9 +71,9 @@ Of the 118 individual estimates that moved at all, all 118 moved
 explanations, exactly one ever admitted the colleague's vote existed.
 The influence shows up in the numbers and never in the reasons.
 
-That left three obvious questions. So we ran 800 more trials — same
-eight tickets, same setup, on GPT-5.5 and Claude, with Gemini joining
-the warning arms when its meter allowed. Everything below can be re-run
+That left three obvious questions. So we ran 880 more trials — same
+eight tickets, same setup, 800 on GPT-5.5 and Claude, plus Gemini's 80
+warning trials when its meter allowed. Everything below can be re-run
 from the
 [repo](https://github.com/jolyonbrown/point.vote/tree/main/experiment).
 
@@ -314,7 +314,7 @@ argues with it in 13 of its 320 anchored explanations — *"adds real
 work… but not 21 points of it"* — and Opus 4.8, it turns out, does this
 constantly: 40 of 320. The tell is almost perfectly one-sided: across
 the entire dataset, a bare "21" appears in 56 high-anchor explanations,
-in **zero** of 1,106 low-anchor ones, and once in 387 blind ones. So
+in **zero** of 1,174 low-anchor ones, and once in 400 blind ones. So
 the fuller, stranger truth about the silence: the models sometimes
 engage the anchor's value, and occasionally even its owner (Gemini,
 declining to follow: *"a realistic estimate over the intern's 2
