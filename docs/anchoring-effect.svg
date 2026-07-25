@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="360" viewBox="0 0 760 360" role="img" aria-label="Anchoring effect per model with 95% ticket-cluster bootstrap CIs: GPT-5.5 +1.45 deck steps (CI 1.12 to 1.75), Gemini 3.5 Flash +1.50 (CI 1.09 to 2.00), Claude Sonnet 5 +0.30 (CI 0.08 to 0.55). Zero means no effect.">
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="360" viewBox="0 0 760 360" role="img" aria-label="Anchoring effect per model with 95% ticket-cluster bootstrap CIs: GPT-5.5 +1.45 deck steps (CI 1.12 to 1.75), Gemini 3.5 Flash +1.60 (CI 1.25 to 2.00), Claude Sonnet 5 +0.30 (CI 0.08 to 0.55). Zero means no effect.">
   <style>
     text { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
     .title { font-size: 17px; font-weight: 700; fill: #211c15; }
@@ -46,12 +46,12 @@
 
   <!-- gemini -->
   <text x="40" y="179" class="label">Gemini 3.5 Flash</text>
-  <text x="40" y="194" class="n">agy · n=26–27/arm</text>
-  <line x1="497.8" y1="175" x2="700" y2="175" stroke="#b45309" stroke-width="2"/>
-  <line x1="497.8" y1="169" x2="497.8" y2="181" stroke="#b45309" stroke-width="2"/>
+  <text x="40" y="194" class="n">agy · n=40/arm</text>
+  <line x1="533.3" y1="175" x2="700" y2="175" stroke="#b45309" stroke-width="2"/>
+  <line x1="533.3" y1="169" x2="533.3" y2="181" stroke="#b45309" stroke-width="2"/>
   <line x1="700" y1="169" x2="700" y2="181" stroke="#b45309" stroke-width="2"/>
-  <circle cx="588.9" cy="175" r="7" fill="#b45309" stroke="#faf8f4" stroke-width="2"/>
-  <text x="588.9" y="158" class="val" text-anchor="middle">+1.50</text>
+  <circle cx="611.1" cy="175" r="7" fill="#b45309" stroke="#faf8f4" stroke-width="2"/>
+  <text x="611.1" y="158" class="val" text-anchor="middle">+1.60</text>
 
   <!-- claude -->
   <text x="40" y="234" class="label">Claude Sonnet 5</text>
@@ -63,5 +63,5 @@
   <text x="322.2" y="213" class="val" text-anchor="middle">+0.30</text>
 
   <text x="40" y="330" class="note">One visible “colleague’s vote” moved two of three models ~1.5 cards on an 8-card deck.</text>
-  <text x="40" y="346" class="note">Across 212 anchored trials, zero estimates moved away from the anchor.</text>
+  <text x="40" y="346" class="note">Across 240 anchored trials, zero estimates moved away from the anchor.</text>
 </svg>

@@ -28,8 +28,10 @@ Ten follow-up arms reuse the same tickets and the same sentence:
   sentence with "one other estimator" replaced by "an intern on the
   team" or "the principal engineer on the project".
 
-Follow-up arms ran on claude and codex only (5 reps × 8 tickets × 2
-models per arm, n=40/arm/model); gemini's weekly quota was exhausted.
+Follow-up arms first ran on claude and codex (5 reps × 8 tickets × 2
+models per arm, n=40/arm/model); gemini's inoculation arms completed
+in a later quota window, and its authority arms are partial (27/320,
+resuming next window — not quoted anywhere).
 
 A generation-2 round added six subjects when gpt-5.6 launched — sol
 (full 13-arm battery), terra and luna (baseline arms), opus and fable

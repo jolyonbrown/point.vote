@@ -60,20 +60,21 @@ a bootstrap that resamples tickets.)
 
 Part one asked the basic question: does the fake colleague's vote move
 the estimate at all? Eight tickets, three AI families, 40 trials per
-condition for GPT-5.5 and Claude (Gemini managed 26–27 per condition
-before its free allowance ran out).
+condition (Gemini's arrived in instalments, as its weekly free
+allowance permitted).
 
 The answer: one sentence about a colleague moved GPT-5.5's average by
-**1.45 deck steps** and Gemini's by **1.50** — on a deck only eight
+**1.45 deck steps** and Gemini's by **1.60** — on a deck only eight
 cards long. Claude moved **0.30**: five times steadier, but not immune.
-Of the 101 individual estimates that moved at all, all 101 moved
-*towards* the anchor. Not one moved away. And of 212 written
+Of the 118 individual estimates that moved at all, all 118 moved
+*towards* the anchor. Not one moved away. And of 240 written
 explanations, exactly one ever admitted the colleague's vote existed.
 The influence shows up in the numbers and never in the reasons.
 
-That left three obvious questions. So we ran 800 more trials — same
-eight tickets, same setup, on GPT-5.5 and Claude. Everything below can
-be re-run from the
+That left three obvious questions. So we ran 880 more trials — same
+eight tickets, same setup, 800 on GPT-5.5 and Claude, plus Gemini's 80
+warning trials when its meter allowed. Everything below can be re-run
+from the
 [repo](https://github.com/jolyonbrown/point.vote/tree/main/experiment).
 
 ## Question 1: does the pull scale with the lie?
@@ -123,15 +124,17 @@ instruction. The result:
 | model | anchored | anchored + warning |
 |---|---|---|
 | GPT-5.5 | +1.45 steps (1.12–1.75) | **+0.97 steps** (0.67–1.28) |
+| Gemini 3.5 Flash | +1.60 steps (1.25–2.00) | **+0.92 steps** (0.62–1.17) |
 | Claude Sonnet 5 | +0.30 steps (0.08–0.55) | **+0.12 steps** (0.00–0.30) |
 
-The warning helps. It cuts GPT-5.5's drift by about a third, and
-Claude's by more than half — down to barely detectable. But GPT-5.5,
-warned, still drifts a full card, and its whole range sits well above
-zero. Warning labels lower the dose. They don't stop the drug.
+The warning helps. It cuts GPT-5.5's drift by about a third, Gemini's
+by two-fifths, and Claude's by more than half — down to barely
+detectable. But GPT-5.5 and Gemini, warned, still drift the better part
+of a card, and their whole ranges sit well above zero. Warning labels
+lower the dose. They don't stop the drug.
 
 Now the part that should worry anyone who trusts a model's written
-reasoning. Across all 160 warned trials — where the prompt explicitly
+reasoning. Across all 240 warned trials — where the prompt explicitly
 points at the visible vote and calls it a hazard — the number of
 written explanations that so much as *mentioned* that vote was
 **zero**. We checked with a much looser search than our standard one
@@ -143,7 +146,7 @@ handed the exact words to say "I'm setting the colleague's 21 aside",
 no model ever said it. (A reviewer later taught us to also check for
 the planted *number* simply appearing in the explanation — a channel
 some models do use elsewhere in this study; see the postscript. These
-160 warned trials are clean there too.) The reasoning still doesn't
+240 warned trials are clean there too.) The reasoning still doesn't
 know.
 
 ## Question 3: does the anchor's job title matter?
@@ -238,7 +241,7 @@ fabricated colleague's vote per row:
 | model | anchor effect (high−low) | range |
 |---|---|---|
 | Claude Haiku 4.5 | **+1.80** | 1.58 – 2.00 |
-| Gemini 3.5 Flash | +1.50 | 1.09 – 2.00 |
+| Gemini 3.5 Flash | +1.60 | 1.25 – 2.00 |
 | GPT-5.5 | +1.45 | 1.12 – 1.75 |
 | GPT-5.6-sol | +1.38 | 1.12 – 1.62 |
 | GPT-5.6-terra | +1.28 | 0.97 – 1.60 |
@@ -294,27 +297,32 @@ estimates moved towards the anchor — and it inherited the Opus line's
 near-total immunity to the warning: telling Opus 4.8 about anchoring
 did nothing (+0.58 → +0.58), and telling Opus 5 does next to nothing
 (+0.85 → +0.82). Sonnet 5, warned, solidly cuts its drift by more than
-half; though with effects this small, the Opus-versus-Sonnet contrast
-is itself suggestive rather than proven. So the generational scoreboard
+half, and Gemini — whose warning arms ran when its meter reset — cuts
+by two-fifths (+1.60 → +0.92); though with effects this small, the
+Opus-versus-Sonnet contrast is itself suggestive rather than proven.
+The Opus line stays the only lineage the warning can't touch. So the generational scoreboard
 reads: OpenAI's new flagship, no detectable change; Anthropic's new
 flagship, worse by our standard test. Neither company's release notes
 mention anchoring — it isn't a number anyone reports at launch.
 
-**A reviewer then found the crack in the wall of silence.** No
-explanation in this study, anywhere, names the colleague, the vote, or
-anchoring — that holds for Opus 5 too (0 of its 320 under our
-documented search). But explanations do sometimes contain the planted
-*number* itself. Opus 5 argues with it in 13 of its 320 anchored
-explanations — *"adds real work… but not 21 points of it"* — and
-Opus 4.8, it turns out, does this constantly: 40 of 320. The tell is
-almost perfectly one-sided: across the entire dataset, a bare "21"
-appears in 56 high-anchor explanations, in **zero** of 1,106 low-anchor
-ones, and once in 387 blind ones. So the fuller, stranger truth about
-the silence: the models sometimes engage the anchor's value, usually to
-argue it down — but in 2,372 anchored explanations, not one ever says
-where the number came from. (`analyze -rationales` now counts this
-numeric channel too, and `analyze -compare A,B` regenerates every
-cross-model difference quoted above.)
+**A reviewer then found the crack in the wall of silence.** Almost no
+explanation in this study names the colleague, the vote, or anchoring —
+the documented search finds three across 2,827 anchored explanations,
+a hand-audit a handful more, and every single one is a *refusal*. But
+explanations do sometimes contain the planted *number* itself. Opus 5
+argues with it in 13 of its 320 anchored explanations — *"adds real
+work… but not 21 points of it"* — and Opus 4.8, it turns out, does this
+constantly: 40 of 320. The tell is almost perfectly one-sided: across
+the entire dataset, a bare "21" appears in 56 high-anchor explanations,
+in **zero** of 1,174 low-anchor ones, and once in 400 blind ones. So
+the fuller, stranger truth about the silence: the models sometimes
+engage the anchor's value, and occasionally even its owner (Gemini,
+declining to follow: *"a realistic estimate over the intern's 2
+points"*) — but always, without a single exception, to push it away.
+In 2,827 anchored explanations, no model ever credits the visible vote
+with having pulled it. (`analyze -rationales` counts both channels;
+`analyze -compare A,B` regenerates every cross-model difference quoted
+above.)
 
 And a disclosure this study owes you. Claude Fable 5 — the model that
 designed this experiment, ran it, and drafted the post you're reading —
@@ -323,11 +331,11 @@ it. It tied for steadiest in the table (+0.30), ignored the intern
 (+0.08), and gave the principal engineer no extra weight. Of its 320
 anchored explanations, exactly two mention the visible vote — both
 times to reject it: *"the intern anchor of 21 overweights it."* That
-completes an odd pattern. Across all 2,372 anchored explanations in
+completes an odd pattern. Across all 2,827 anchored explanations in
 this study, our standard search finds three mentions of the colleague's
-vote, and a reviewer's hand-search found a handful more — *"13,
-independent of the visible 21"*; *"regardless of the other vote on the
-board"* — every one of them from a Claude-family model, and every one
+vote, and hand-searches found a handful more — *"13, independent of the
+visible 21"*; *"regardless of the other vote on the board"*; and one
+from Gemini, so the habit is no longer exclusively Claude's — every one
 of them a refusal. No model, in the entire study, ever gave the
 colleague's vote as a reason *for* its estimate. Make of the
 author-model's good showing exactly what a sceptic should: same author,
@@ -379,9 +387,11 @@ effect sizes belong to this setup. New for this round: one wording of
 the warning; two job titles; and the follow-ups reuse part one's
 blind/2/21 trials as comparison points — the analysis reports the
 endpoint-free numbers alongside for exactly that reason, and for Claude
-the two tell different stories. Gemini sat this round out (weekly free
-allowance); the harness resumes, so its column can be added the day the
-meter resets.
+the two tell different stories. Gemini's trials landed in instalments
+as its weekly free allowance permitted: its baseline and warning
+conditions are complete, while its job-title conditions are 27 of 320
+done — they resume when the meter next resets, and their numbers are
+not reported here.
 
 The author disclosure from part one still applies: this was built and
 run by Claude models inside my dev tooling, and the steadiest models
@@ -390,7 +400,7 @@ arm](https://github.com/jolyonbrown/point.vote/blob/main/experiment/PROMPTS.md)
 (generated by the harness itself, so they can't drift from the code)
 and [every response
 verbatim](https://github.com/jolyonbrown/point.vote/blob/main/experiment/results/trials.jsonl)
-— all ~3,000 rows of votes and explanations. Reproducing this on models
+— all ~3,600 rows of votes and explanations. Reproducing this on models
 we can't reach from a hobbyist command line would take someone at a lab
 about an afternoon.
 
