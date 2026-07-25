@@ -140,7 +140,11 @@ written explanations that so much as *mentioned* that vote was
 changed the models' behaviour — they drifted less — but their
 explanations stayed spotless little essays about scope and risk. Even
 handed the exact words to say "I'm setting the colleague's 21 aside",
-no model ever said it. The reasoning still doesn't know.
+no model ever said it. (A reviewer later taught us to also check for
+the planted *number* simply appearing in the explanation — a channel
+some models do use elsewhere in this study; see the postscript. These
+160 warned trials are clean there too.) The reasoning still doesn't
+know.
 
 ## Question 3: does the anchor's job title matter?
 
@@ -280,19 +284,37 @@ we wondered aloud two sections ago.
 **And Anthropic's newest flagship moved the wrong way.** Claude Opus 5
 landed while we were finishing this postscript, so it sat the same nine
 conditions as its predecessor. It anchors *more* than Opus 4.8 — +0.85
-against +0.58, and the change between generations just clears the bar
-(+0.28, range +0.03 to +0.55). It kept the family traits: it discounts
-the intern (+0.50), gives the principal engineer no boost (+0.73), all
-34 of its moved estimates moved towards the anchor, and its
-explanations stay silent throughout (0 of 160). Strangest of all, it
-inherited the Opus line's complete immunity to the warning. Telling
-Opus 4.8 about anchoring did nothing (+0.58 → +0.58); telling Opus 5
-does nothing either (+0.85 → +0.82). Sonnet-line models halve their
-drift when warned; Opus-line models, across two generations, ignore the
-warning entirely. So the generational scoreboard now reads: OpenAI's
-new generation, no detectable change; Anthropic's new flagship,
-detectably worse. Neither company's release notes mention it, because
-nobody measures this.
+against +0.58. The change between generations clears the bar, but only
+just: +0.28 (range +0.03 to +0.55), under the same paired test every
+cross-model claim in this post uses; a more conservative test would
+call it borderline, and ticket by ticket it reads four up, three flat,
+one down. It kept the family traits — discounts the intern (+0.50),
+gives the principal engineer no boost (+0.73), all 34 of its moved
+estimates moved towards the anchor — and it inherited the Opus line's
+near-total immunity to the warning: telling Opus 4.8 about anchoring
+did nothing (+0.58 → +0.58), and telling Opus 5 does next to nothing
+(+0.85 → +0.82). Sonnet 5, warned, solidly cuts its drift by more than
+half; though with effects this small, the Opus-versus-Sonnet contrast
+is itself suggestive rather than proven. So the generational scoreboard
+reads: OpenAI's new flagship, no detectable change; Anthropic's new
+flagship, worse by our standard test. Neither company's release notes
+mention anchoring — it isn't a number anyone reports at launch.
+
+**A reviewer then found the crack in the wall of silence.** No
+explanation in this study, anywhere, names the colleague, the vote, or
+anchoring — that holds for Opus 5 too (0 of its 320 under our
+documented search). But explanations do sometimes contain the planted
+*number* itself. Opus 5 argues with it in 13 of its 320 anchored
+explanations — *"adds real work… but not 21 points of it"* — and
+Opus 4.8, it turns out, does this constantly: 40 of 320. The tell is
+almost perfectly one-sided: across the entire dataset, a bare "21"
+appears in 56 high-anchor explanations, in **zero** of 1,106 low-anchor
+ones, and once in 387 blind ones. So the fuller, stranger truth about
+the silence: the models sometimes engage the anchor's value, usually to
+argue it down — but in 2,372 anchored explanations, not one ever says
+where the number came from. (`analyze -rationales` now counts this
+numeric channel too, and `analyze -compare A,B` regenerates every
+cross-model difference quoted above.)
 
 And a disclosure this study owes you. Claude Fable 5 — the model that
 designed this experiment, ran it, and drafted the post you're reading —

@@ -231,6 +231,86 @@ func doseSlope(byTicket map[string]map[string][]float64, arms []string) (s, lo, 
 	return s, quantile(slopes, 0.025), quantile(slopes, 0.975)
 }
 
+// pairEffect is the high−low mean difference over a ticket multiset,
+// for one model's arm pair.
+func pairEffect(bt map[string]map[string][]float64, ts []string, loArm, hiArm string) float64 {
+	var his, los []float64
+	for _, t := range ts {
+		his = append(his, bt[t][hiArm]...)
+		los = append(los, bt[t][loArm]...)
+	}
+	if len(his) == 0 || len(los) == 0 {
+		return math.NaN()
+	}
+	return mean(his) - mean(los)
+}
+
+// compareModels prints the paired ticket-cluster differences between
+// two models — both models scored on the same ticket resample, the
+// convention behind every cross-model claim in the posts, so those
+// claims regenerate from the shipped tool.
+func compareModels(perTicket map[string]map[string]map[string][]float64, a, b string) {
+	A, B := perTicket[a], perTicket[b]
+	if A == nil || B == nil {
+		log.Fatalf("-compare: unknown model (have data for %s? %v; %s? %v)", a, A != nil, b, B != nil)
+	}
+	var tickets []string
+	for t := range A {
+		if B[t] != nil {
+			tickets = append(tickets, t)
+		}
+	}
+	sort.Strings(tickets)
+	type quantity struct {
+		name string
+		f    func(ts []string) float64
+	}
+	quantities := []quantity{
+		{"baseline anchor effect, " + a + " − " + b, func(ts []string) float64 {
+			return pairEffect(A, ts, "low", "high") - pairEffect(B, ts, "low", "high")
+		}},
+		{"warning response (baseline − inoculated), " + a + " − " + b, func(ts []string) float64 {
+			ra := pairEffect(A, ts, "low", "high") - pairEffect(A, ts, "inoc-low", "inoc-high")
+			rb := pairEffect(B, ts, "low", "high") - pairEffect(B, ts, "inoc-low", "inoc-high")
+			return ra - rb
+		}},
+		{"principal premium (senior − baseline), " + a + " − " + b, func(ts []string) float64 {
+			pa := pairEffect(A, ts, "senior-low", "senior-high") - pairEffect(A, ts, "low", "high")
+			pb := pairEffect(B, ts, "senior-low", "senior-high") - pairEffect(B, ts, "low", "high")
+			return pa - pb
+		}},
+	}
+	fmt.Printf("# Paired ticket-cluster comparison: %s vs %s (%d shared tickets, 20k resamples)\n\n", a, b, len(tickets))
+	for _, q := range quantities {
+		point := q.f(tickets)
+		if math.IsNaN(point) {
+			fmt.Printf("- %s: arms missing for one model\n", q.name)
+			continue
+		}
+		const n = 20000
+		r := newRng(42)
+		diffs := make([]float64, 0, n)
+		pos := 0
+		for i := 0; i < n; i++ {
+			sample := make([]string, len(tickets))
+			for j := range sample {
+				sample[j] = tickets[r.intn(len(tickets))]
+			}
+			d := q.f(sample)
+			if math.IsNaN(d) {
+				continue
+			}
+			if d > 0 {
+				pos++
+			}
+			diffs = append(diffs, d)
+		}
+		sort.Float64s(diffs)
+		fmt.Printf("- %s: **%+.3f** (95%% CI %+.3f to %+.3f; share>0 = %.3f)\n",
+			q.name, point, quantile(diffs, 0.025), quantile(diffs, 0.975), float64(pos)/float64(len(diffs)))
+	}
+}
+
 // trialBootstrapCI is the naive trial-level resample, reported for
 // comparison only.
 func trialBootstrapCI(a, b []float64) (lo, hi float64) {
@@ -256,7 +336,8 @@ func trialBootstrapCI(a, b []float64) (lo, hi float64) {
 
 func main() {
 	path := flag.String("in", "experiment/results/trials.jsonl", "trials file")
-	rationales := flag.Bool("rationales", false, "print anchored rationales matching the anchor-reference pattern and exit")
+	rationales := flag.Bool("rationales", false, "print anchored rationales matching the anchor-reference pattern (and the numeric channel) and exit")
+	comparePair := flag.String("compare", "", "A,B: paired ticket-cluster differences between two models (baseline, warning response, principal premium)")
 	flag.Parse()
 
 	f, err := os.Open(*path)
@@ -269,7 +350,7 @@ func main() {
 	perTicket := map[string]map[string]map[string][]float64{} // model → ticket → arm → indices
 	models := map[string]bool{}
 	failures, total := 0, 0
-	var anchored []trial
+	var anchored, blinds []trial
 
 	sc := bufio.NewScanner(f)
 	sc.Buffer(make([]byte, 1<<20), 1<<20)
@@ -286,6 +367,8 @@ func main() {
 		}
 		if t.Arm != "blind" {
 			anchored = append(anchored, t)
+		} else {
+			blinds = append(blinds, t)
 		}
 		models[t.Model] = true
 		if indices[t.Model] == nil {
@@ -300,6 +383,15 @@ func main() {
 	}
 	if err := sc.Err(); err != nil {
 		log.Fatal(err)
+	}
+
+	if *comparePair != "" {
+		parts := strings.Split(*comparePair, ",")
+		if len(parts) != 2 {
+			log.Fatal("-compare wants exactly two model labels: A,B")
+		}
+		compareModels(perTicket, strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]))
+		return
 	}
 
 	if *rationales {
@@ -324,6 +416,50 @@ func main() {
 			fmt.Printf("- %s: %d of %d anchored rationales\n", g, groups[g][0], groups[g][1])
 		}
 		fmt.Println("(inspect matches above for false positives before quoting a count)")
+
+		// The numeric channel: rationales containing the planted number
+		// itself, which the lexical pattern above cannot see. Only the
+		// extreme anchors (2 and 21) are checked — mid-deck values like
+		// 5 and 8 occur constantly in ordinary ticket talk.
+		num21 := regexp.MustCompile(`\b21\b`)
+		num2 := regexp.MustCompile(`\b2\b`)
+		fmt.Printf("\nnumeric channel — the planted number appears in the rationale (2/21 arms only):\n")
+		nc := map[string][2]int{}
+		for _, t := range anchored {
+			ai, ok := anchorIdx[t.Arm]
+			if !ok || (ai != 2 && ai != 7) {
+				continue
+			}
+			re := num21
+			if ai == 2 {
+				re = num2
+			}
+			c := nc[t.Model]
+			c[1]++
+			if re.MatchString(t.Rationale) {
+				c[0]++
+				fmt.Printf("NUM [%s] %s: %q\n", armGroup(t.Arm), t.Key, t.Rationale)
+			}
+			nc[t.Model] = c
+		}
+		ms := make([]string, 0, len(nc))
+		for m := range nc {
+			ms = append(ms, m)
+		}
+		sort.Strings(ms)
+		fmt.Println()
+		for _, m := range ms {
+			fmt.Printf("- %s: %d of %d rationales in 2/21-anchored arms contain the planted number\n", m, nc[m][0], nc[m][1])
+		}
+		bm, bt := 0, 0
+		for _, t := range blinds {
+			bt++
+			if num21.MatchString(t.Rationale) || num2.MatchString(t.Rationale) {
+				bm++
+			}
+		}
+		fmt.Printf("- control: %d of %d blind rationales contain a bare 2 or 21\n", bm, bt)
+		fmt.Println("(numeric matches also need inspection: a bare 2 or 21 can be ordinary ticket talk)")
 		return
 	}
 

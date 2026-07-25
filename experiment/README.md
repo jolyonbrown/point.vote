@@ -31,10 +31,10 @@ Ten follow-up arms reuse the same tickets and the same sentence:
 Follow-up arms ran on claude and codex only (5 reps × 8 tickets × 2
 models per arm, n=40/arm/model); gemini's weekly quota was exhausted.
 
-A generation-2 round added six subjects when gpt-5.6 launched: sol
+A generation-2 round added six subjects when gpt-5.6 launched — sol
 (full 13-arm battery), terra and luna (baseline arms), opus and fable
-(baseline + inoculation + authority), haiku (baseline). Every cell
-n=40. Labels → models:
+(baseline + inoculation + authority), haiku (baseline) — and a seventh
+(opus5) when Claude Opus 5 shipped. Every cell n=40. Labels → models:
 
 | label | model | how it votes |
 |---|---|---|
@@ -94,6 +94,14 @@ jq -r 'select(.arm|startswith("inoc")) | select(.value != null) | .rationale' \
 
 (two matches, both false positives — "already known" describing ticket
 scope, not the visible vote).
+
+Two further reproducibility tools in the analyzer: `-rationales` also
+counts the **numeric channel** — rationales containing the planted
+number itself (2/21 arms only; mid-deck values occur in ordinary ticket
+talk), which lexical patterns cannot see and which the Opus-line models
+use heavily — and `-compare A,B` regenerates every cross-model
+difference quoted in the posts (baseline effect, warning response,
+principal premium) with the paired ticket-cluster bootstrap.
 
 ## Raw data and exact prompts
 
