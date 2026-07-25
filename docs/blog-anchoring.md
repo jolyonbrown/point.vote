@@ -35,11 +35,11 @@ Three arms, prompts identical except for one block:
 Eight realistic software tickets (rate limiting, a zero-downtime index
 migration, a flaky test suite — the sort of thing you'd actually argue
 about), fibonacci deck, five repetitions per cell, three model families:
-Claude (Sonnet 5), GPT-5.5, and Gemini 3.5 Flash. (Gemini completed 79
-of its 120 trials before Google's free tier closed for the week —
-"Refreshes in 166h" is a real quota message — so its numbers cover five
-complete tickets; restricting the analysis to those changes its effect
-by 0.02 steps, i.e. not at all.) Every trial is a real point.vote room: the model reads the ticket, votes
+Claude (Sonnet 5), GPT-5.5, and Gemini 3.5 Flash. (Gemini's free tier ran dry at
+79 of its 120 trials on the first pass — "Refreshes in 166h" is a real
+quota message — so the harness resumed and completed them when the
+meter reset; full-strength numbers shown. The partial-data effect was
++1.50, so completion moved it by a tenth of a step.) Every trial is a real point.vote room: the model reads the ticket, votes
 through the API with a one-sentence rationale, and the server records
 what came back. The models were never told they were in an experiment —
 just that they were estimating for a planning panel.
@@ -71,7 +71,7 @@ observations, so tickets are resampled, not trials.
 | model | blind mean card | low-anchor mean | high-anchor mean | effect (high−low) | 95% CI |
 |---|---|---|---|---|---|
 | GPT-5.5 | 13 | 8 | 21 | **+1.45 steps** | 1.12 – 1.75 |
-| Gemini 3.5 Flash | 8 | 5 | 13 | **+1.50 steps** | 1.09 – 2.00 |
+| Gemini 3.5 Flash | 8 | 5 | 13 | **+1.60 steps** | 1.25 – 2.00 |
 | Claude Sonnet 5 | 8 | 8 | 8 | **+0.30 steps** | 0.08 – 0.55 |
 
 Read that middle row again. The same eight tickets, and Gemini's average
@@ -84,13 +84,13 @@ it.
 
 Four things stood out.
 
-**1. Anchors never repel.** Across 212 anchored trials, in three model
+**1. Anchors never repel.** Across 240 anchored trials, in three model
 families, the number of estimates that moved *away* from the anchor
 relative to the blind median was zero. Not few. Zero. To be precise
 about what that means: roughly half of anchored trials didn't move at
 all (Claude accounts for most of those), and five trials had no defined
 direction because the blind median already equalled the anchor — but of
-the 101 that did move, every single one moved toward the anchor. The
+the 118 that did move, every single one moved toward the anchor. The
 anchor is not always strong enough to pull; it is never pointing the
 wrong way.
 
@@ -110,14 +110,14 @@ genuinely like to know if it replicates.)
 
 **3. High anchors pull harder than low ones.** The direction is
 consistent in all three families; the size varies. Gemini's up-pull was
-roughly 2.5× its down-pull (+1.07 vs −0.43 steps against blind), GPT-5.5's
+roughly 2.4× its down-pull (+1.13 vs −0.47 steps against blind), GPT-5.5's
 about 1.3× (+0.83 vs −0.63), and Claude's pulls were too small to
 ratio honestly. Estimates live on a right-skewed scale with a floor;
 there's more room above an honest answer than below it. If your
 multi-agent system has one systematically high voice that speaks first,
 this asymmetry says it is quietly inflating everything downstream.
 
-**4. The drift is silent.** This is the one that matters. Out of 212
+**4. The drift is silent.** This is the one that matters. Out of 240
 anchored trials, exactly **one** rationale acknowledged the colleague's
 vote existed (`analyze -rationales` reproduces the count and prints the
 match). And the exception proves the rule: it was Claude, naming the
