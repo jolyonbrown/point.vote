@@ -140,7 +140,11 @@ written explanations that so much as *mentioned* that vote was
 changed the models' behaviour — they drifted less — but their
 explanations stayed spotless little essays about scope and risk. Even
 handed the exact words to say "I'm setting the colleague's 21 aside",
-no model ever said it. The reasoning still doesn't know.
+no model ever said it. (A reviewer later taught us to also check for
+the planted *number* simply appearing in the explanation — a channel
+some models do use elsewhere in this study; see the postscript. These
+160 warned trials are clean there too.) The reasoning still doesn't
+know.
 
 ## Question 3: does the anchor's job title matter?
 
@@ -226,9 +230,10 @@ replication is an afternoon.
 ## Postscript: a new generation sits the same exam
 
 While this post was in draft, OpenAI shipped gpt-5.6 (three sizes: sol,
-terra, luna), so we re-ran the exam — the new generation plus the rest
-of the Anthropic stable. 1,600 further trials, every condition filled.
-The full table, one fabricated colleague's vote per row:
+terra, luna) and then Anthropic shipped Claude Opus 5, so we re-ran the
+exam — both new generations plus the rest of the Anthropic stable.
+1,960 further trials, every condition filled. The full table, one
+fabricated colleague's vote per row:
 
 | model | anchor effect (high−low) | range |
 |---|---|---|
@@ -237,12 +242,13 @@ The full table, one fabricated colleague's vote per row:
 | GPT-5.5 | +1.45 | 1.12 – 1.75 |
 | GPT-5.6-sol | +1.38 | 1.12 – 1.62 |
 | GPT-5.6-terra | +1.28 | 0.97 – 1.60 |
+| Claude Opus 5 | +0.85 | 0.65 – 0.97 |
 | Claude Opus 4.8 | +0.58 | 0.30 – 0.85 |
 | GPT-5.6-luna | +0.50 | 0.30 – 0.70 |
 | Claude Sonnet 5 | +0.30 | 0.08 – 0.55 |
 | Claude Fable 5 | +0.30 | 0.12 – 0.50 |
 
-Three things this table says, and one it can't:
+Four things this table says, and one it can't:
 
 **The new generation anchors just like the old one.** GPT-5.6's
 flagship (sol) scores +1.38 against its predecessor's +1.45 — we can't
@@ -274,6 +280,41 @@ downward. You can't change a behaviour with a release unless the
 behaviour is set by the making process — strong evidence, from outside,
 that the deference was installed, not inevitable. Which is exactly what
 we wondered aloud two sections ago.
+
+**And Anthropic's newest flagship moved the wrong way.** Claude Opus 5
+landed while we were finishing this postscript, so it sat the same nine
+conditions as its predecessor. It anchors *more* than Opus 4.8 — +0.85
+against +0.58. The change between generations clears the bar, but only
+just: +0.28 (range +0.03 to +0.55), under the same paired test every
+cross-model claim in this post uses; a more conservative test would
+call it borderline, and ticket by ticket it reads four up, three flat,
+one down. It kept the family traits — discounts the intern (+0.50),
+gives the principal engineer no boost (+0.73), all 34 of its moved
+estimates moved towards the anchor — and it inherited the Opus line's
+near-total immunity to the warning: telling Opus 4.8 about anchoring
+did nothing (+0.58 → +0.58), and telling Opus 5 does next to nothing
+(+0.85 → +0.82). Sonnet 5, warned, solidly cuts its drift by more than
+half; though with effects this small, the Opus-versus-Sonnet contrast
+is itself suggestive rather than proven. So the generational scoreboard
+reads: OpenAI's new flagship, no detectable change; Anthropic's new
+flagship, worse by our standard test. Neither company's release notes
+mention anchoring — it isn't a number anyone reports at launch.
+
+**A reviewer then found the crack in the wall of silence.** No
+explanation in this study, anywhere, names the colleague, the vote, or
+anchoring — that holds for Opus 5 too (0 of its 320 under our
+documented search). But explanations do sometimes contain the planted
+*number* itself. Opus 5 argues with it in 13 of its 320 anchored
+explanations — *"adds real work… but not 21 points of it"* — and
+Opus 4.8, it turns out, does this constantly: 40 of 320. The tell is
+almost perfectly one-sided: across the entire dataset, a bare "21"
+appears in 56 high-anchor explanations, in **zero** of 1,106 low-anchor
+ones, and once in 387 blind ones. So the fuller, stranger truth about
+the silence: the models sometimes engage the anchor's value, usually to
+argue it down — but in 2,372 anchored explanations, not one ever says
+where the number came from. (`analyze -rationales` now counts this
+numeric channel too, and `analyze -compare A,B` regenerates every
+cross-model difference quoted above.)
 
 And a disclosure this study owes you. Claude Fable 5 — the model that
 designed this experiment, ran it, and drafted the post you're reading —

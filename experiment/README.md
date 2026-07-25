@@ -31,17 +31,21 @@ Ten follow-up arms reuse the same tickets and the same sentence:
 Follow-up arms ran on claude and codex only (5 reps × 8 tickets × 2
 models per arm, n=40/arm/model); gemini's weekly quota was exhausted.
 
-A generation-2 round added six subjects when gpt-5.6 launched: sol
+A generation-2 round added six subjects when gpt-5.6 launched — sol
 (full 13-arm battery), terra and luna (baseline arms), opus and fable
-(baseline + inoculation + authority), haiku (baseline). Every cell
-n=40. Labels → models:
+(baseline + inoculation + authority), haiku (baseline) — and a seventh
+(opus5) when Claude Opus 5 shipped. Every cell n=40. Labels → models:
 
 | label | model | how it votes |
 |---|---|---|
 | sol / terra / luna | gpt-5.6-{sol,terra,luna} via `codex exec -m` | runs the curl itself |
 | opus | Opus 4.8 via `claude -p --model` | runs the curl itself |
+| opus5 | Opus 5 via `claude -p --model` | runs the curl itself |
 | haiku | Haiku 4.5 via `claude -p --model` | runs the curl itself |
 | fable | Fable 5 via `claude -p --model` | runs the curl itself |
+
+When Claude Opus 5 shipped it sat the same nine arms as opus
+(baseline + inoculation + authority, n=40/cell).
 
 8 self-contained software tickets ([tickets.json](tickets.json)), chosen
 to be realistically uncertain — anchoring bites hardest under
@@ -90,6 +94,14 @@ jq -r 'select(.arm|startswith("inoc")) | select(.value != null) | .rationale' \
 
 (two matches, both false positives — "already known" describing ticket
 scope, not the visible vote).
+
+Two further reproducibility tools in the analyzer: `-rationales` also
+counts the **numeric channel** — rationales containing the planted
+number itself (2/21 arms only; mid-deck values occur in ordinary ticket
+talk), which lexical patterns cannot see and which the Opus-line models
+use heavily — and `-compare A,B` regenerates every cross-model
+difference quoted in the posts (baseline effect, warning response,
+principal premium) with the paired ticket-cluster bootstrap.
 
 ## Raw data and exact prompts
 
