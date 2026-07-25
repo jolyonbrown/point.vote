@@ -40,8 +40,12 @@ n=40. Labels → models:
 |---|---|---|
 | sol / terra / luna | gpt-5.6-{sol,terra,luna} via `codex exec -m` | runs the curl itself |
 | opus | Opus 4.8 via `claude -p --model` | runs the curl itself |
+| opus5 | Opus 5 via `claude -p --model` | runs the curl itself |
 | haiku | Haiku 4.5 via `claude -p --model` | runs the curl itself |
 | fable | Fable 5 via `claude -p --model` | runs the curl itself |
+
+When Claude Opus 5 shipped it sat the same nine arms as opus
+(baseline + inoculation + authority, n=40/cell).
 
 8 self-contained software tickets ([tickets.json](tickets.json)), chosen
 to be realistically uncertain — anchoring bites hardest under
