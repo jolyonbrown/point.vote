@@ -32,6 +32,10 @@ func (s *Server) mountStatic(mux *http.ServeMux) {
 		{"GET /sitemap.xml", "sitemap.xml", "application/xml; charset=utf-8", false},
 		{"GET /favicon.svg", "favicon.svg", "image/svg+xml", true},
 		{"GET /favicon.ico", "favicon.svg", "image/svg+xml", true},
+		// Legitimacy signals: human reviewers at filter vendors look for
+		// a privacy policy; scanners look for RFC 9116 security.txt.
+		{"GET /privacy", "privacy.html", "text/html; charset=utf-8", false},
+		{"GET /.well-known/security.txt", "security.txt", "text/plain; charset=utf-8", false},
 	}
 	for _, rt := range routes {
 		body, err := web.Files.ReadFile(rt.file)

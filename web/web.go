@@ -6,5 +6,5 @@ package web
 
 import "embed"
 
-//go:embed index.html room.html app.js style.css llms.txt openapi.yaml skill.md sitemap.xml favicon.svg
+//go:embed index.html room.html privacy.html app.js style.css llms.txt openapi.yaml skill.md sitemap.xml favicon.svg security.txt
 var Files embed.FS

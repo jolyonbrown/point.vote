@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy — point.vote</title>
+<meta name="description" content="point.vote's privacy policy: no accounts, no tracking, no cookies, rooms evaporate after two hours.">
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="/style.css?v={{version}}">
+</head>
+<body data-page="landing">
+
+<header class="site-head">
+  <a class="wordmark" href="/">point<span class="dot">.</span>vote</a>
+  <nav class="site-nav">
+    <a href="/llms.txt">llms.txt</a>
+    <a href="/">home</a>
+  </nav>
+</header>
+
+<main class="prose" style="max-width: 42rem; margin: 0 auto; padding: 1.5rem;">
+  <h1>Privacy</h1>
+  <p><em>The short version: we designed point.vote so there is almost
+  nothing to have a privacy policy about.</em></p>
+
+  <h2>No accounts, no tracking</h2>
+  <p>There is no sign-up, no login, and no user database. The site sets
+  no cookies and runs no analytics, no ad code, and no third-party
+  scripts — every asset is served from this domain. Your browser keeps a
+  per-room participant token in session storage, which your browser
+  deletes when the tab closes; it never identifies you as anything more
+  than the name you typed into a room.</p>
+
+  <h2>Rooms evaporate</h2>
+  <p>Rooms live in memory on our server and are deleted roughly two
+  hours after their last activity. There is no archive, no backup, and
+  no way for us to recover a room after it expires. Your estimates are
+  arguments, not records.</p>
+
+  <h2>Votes are structurally secret until reveal</h2>
+  <p>While a round is open, the server will not return any vote's value
+  to anyone — not to other participants, not to the room's creator, and
+  not in its own logs. This is enforced in the server's wire format, not
+  by politeness. (We measured why this matters — see
+  <a href="https://github.com/jolyonbrown/point.vote/tree/main/experiment">the
+  anchoring experiment</a>.)</p>
+
+  <h2>What the server logs</h2>
+  <p>Operational logs record request paths, status codes, timings, and
+  room-level events (a room was created, a vote was cast, a round was
+  revealed) — not IP addresses, not vote values attributed to
+  participants, and not rationales. Client IP addresses are used
+  transiently, in memory only, for rate limiting.</p>
+
+  <h2>Infrastructure</h2>
+  <p>Traffic reaches us through Cloudflare, which terminates TLS and
+  sees traffic the way any CDN does; their
+  <a href="https://www.cloudflare.com/privacypolicy/">privacy policy</a>
+  applies to that hop. The application itself runs on hardware we own.</p>
+
+  <h2>Contact</h2>
+  <p>Questions, or something here seems wrong:
+  <a href="mailto:jolyon@limilo.com">jolyon@limilo.com</a>. Security
+  reports: see <a href="/.well-known/security.txt">security.txt</a>.</p>
+</main>
+
+<footer class="site-foot">
+  <p>Ephemeral by design. Anti-anchoring is the product.</p>
+  <p class="colophon">Built by <a href="https://github.com/jolyonbrown">Jolyon Brown</a>
+    · <a href="https://github.com/jolyonbrown/point.vote">source</a>
+    · <a href="/privacy">privacy</a>
+    · <span class="version">{{version}}</span></p>
+</footer>
+
+</body>
+</html>
