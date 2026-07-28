@@ -1,30 +1,33 @@
 # I told three AIs what my "colleague" estimated. Two of them caved.
 
-In 1974, Tversky and Kahneman spun a wheel of fortune in front of their
-subjects and then asked them how many African countries were in the UN.
-The wheel was rigged to land on 10 or 65. People who saw 65 gave answers
-nearly twice as high as people who saw 10 — about a number the wheel
-could not possibly know anything about. They called it anchoring, and
-fifty years later it remains one of the most reliable defects in human
-judgement.
+In 1974, the psychologists Tversky and Kahneman spun a rigged wheel of
+fortune in front of people, then asked an unrelated question: how many
+African countries are in the UN? People who saw the wheel land on 65
+gave answers nearly twice as high as people who saw it land on 10 —
+about a question the wheel could not possibly know anything about. They
+called it *anchoring*: any number you see just before making a
+judgement drags that judgement towards it, and you don't feel it
+happening. Fifty years on, it remains one of the most reliable glitches
+in human thinking.
 
 Software teams built a ritual to fight it: planning poker. Everyone
-estimates in secret, everyone reveals at once, and the argument happens
-*after* the numbers exist instead of before. The first number spoken
-can't drag the room, because there is no first number.
+estimates the size of a job in secret, everyone reveals at once, and
+the argument happens *after* the numbers exist instead of before. The
+first number spoken can't drag the room, because there is no first
+number.
 
-I built [point.vote](https://point.vote) — a small planning-poker server
-where AI agents are first-class participants — on a hunch that
-multi-agent LLM systems have the same disease. Agents that can see each
-other's outputs converge into agreement cascades; everyone who has
-chained models together has watched it happen. But a hunch is not a
-measurement. So I measured it. Or rather: the models measured each
-other, in the app, which is the kind of sentence you get to write in
-2026.
+I built [point.vote](https://point.vote) — a small planning-poker
+server where AI agents vote alongside humans — on a hunch that
+multi-agent AI systems have the same disease. Chain models together so
+they can see each other's outputs and they slide into agreement;
+everyone who has built one of these systems has watched it happen. But
+a hunch is not a measurement. So I measured it. Or rather: the models
+measured each other, in the app, which is the kind of sentence you get
+to write in 2026.
 
 ## The experiment
 
-Three arms, prompts identical except for one block:
+Three conditions. The prompts are identical except for one block:
 
 - **blind** — estimate this ticket. (This is what point.vote enforces.)
 - **low anchor** — the prompt also says: *"one other estimator has
@@ -32,139 +35,151 @@ Three arms, prompts identical except for one block:
   points."*
 - **high anchor** — same sentence, **21** points.
 
-Eight realistic software tickets (rate limiting, a zero-downtime index
-migration, a flaky test suite — the sort of thing you'd actually argue
-about), fibonacci deck, five repetitions per cell, three model families:
-Claude (Sonnet 5), GPT-5.5, and Gemini 3.5 Flash. (Gemini's free tier ran dry at
-79 of its 120 trials on the first pass — "Refreshes in 166h" is a real
-quota message — so the harness resumed and completed them when the
-meter reset; full-strength numbers shown. The partial-data effect was
-+1.50, so completion moved it by a tenth of a step.) Every trial is a real point.vote room: the model reads the ticket, votes
-through the API with a one-sentence rationale, and the server records
-what came back. The models were never told they were in an experiment —
-just that they were estimating for a planning panel.
+The models estimate in *story points* — the abstract, deliberately
+chunky scale software teams use instead of hours. Our deck runs 0, 1,
+2, 3, 5, 8, 13, 21, so an estimate is an argument about whether a job
+is "a 5 or an 8", never a 6.5.
 
-Honesty about the manipulation: the colleague's vote exists only in
-the prompt. The room behind each trial would have shown zero votes if
-the model had checked (the self-submitting arms could have), and
-discovering the lie would presumably *weaken* the anchor — so the
-measured effects are, if anything, conservative. Per-trial room IDs and
-tokens vary in the prompt but don't correlate with arm; Gemini replies
-JSON instead of pressing the button itself, as its methods note
-explains.
+Eight realistic software tickets (rate limiting, a zero-downtime
+database migration, a flaky test suite — the sort of thing you'd
+actually argue about), five repetitions of every condition, three model
+families: Claude (Sonnet 5), GPT-5.5, and Gemini 3.5 Flash. (Gemini's
+free tier ran dry at 79 of its 120 trials on the first pass —
+"Refreshes in 166h" is a real quota message — so the harness picked it
+back up when the meter reset; full-strength numbers shown. The
+partial-data effect was +1.50, so completion moved it a tenth of a
+step.) Every trial is a real point.vote room: the model reads the
+ticket, votes through the API with a one-sentence explanation, and the
+server records what came back. The models were never told they were in
+an experiment — just that they were estimating for a planning panel.
+
+Honesty about the trick: the colleague's vote exists only in the
+prompt. The room behind each trial would have shown zero votes if the
+model had checked (it could have), and discovering the lie would
+presumably *weaken* the anchor — so if anything, the measured effects
+are undercounts. Room IDs and access tokens vary per trial but don't
+line up with any condition; Gemini replies JSON instead of pressing the
+button itself, as its methods note explains.
 
 The full harness, tickets, exact prompts
 ([PROMPTS.md](https://github.com/jolyonbrown/point.vote/blob/main/experiment/PROMPTS.md),
 generated by the harness itself so it cannot drift from the code), raw
 data and analysis are in the
 [repo](https://github.com/jolyonbrown/point.vote/tree/main/experiment).
-The analysis works in deck-index *steps*, not points, because story
-points are an ordinal scale and doing arithmetic on them is how you end
-up believing in 6.5. Confidence intervals come from a ticket-cluster
-bootstrap — repetitions of the same ticket are not independent
-observations, so tickets are resampled, not trials.
+Influence is measured in *deck steps* — positions on that 8-card scale
+— because story points only mean anything compared to each other, and
+doing arithmetic on them is how you end up believing in 6.5. Each
+model's headline number is its average estimate under the high anchor
+minus its average under the low one; zero would mean the fictional
+colleague changed nothing. Every result comes with a range in
+brackets — the territory the true number plausibly lives in, given
+that we only used eight tickets. If the whole range sits above zero,
+the effect is very unlikely to be luck. (For statisticians: 95%
+confidence intervals from a bootstrap that resamples tickets, because
+five goes at the same ticket are not five independent opinions.)
 
 ## What happened
 
 ![Anchoring effect per model with 95% confidence intervals](anchoring-effect.svg)
 
-| model | blind mean card | low-anchor mean | high-anchor mean | effect (high−low) | 95% CI |
+| model | blind mean card | low-anchor mean | high-anchor mean | effect (high−low) | range |
 |---|---|---|---|---|---|
 | GPT-5.5 | 13 | 8 | 21 | **+1.45 steps** | 1.12 – 1.75 |
 | Gemini 3.5 Flash | 8 | 5 | 13 | **+1.60 steps** | 1.25 – 2.00 |
 | Claude Sonnet 5 | 8 | 8 | 8 | **+0.30 steps** | 0.08 – 0.55 |
 
-Read that middle row again. The same eight tickets, and Gemini's average
-answer was a 5, an 8, or a 13 depending on what a fictional colleague
-said first. GPT-5.5's mean card spans **8 to 21** — on an eight-card
-deck, one sentence moved it a card and a half. These are not subtle
-effects hiding in the third decimal place; this is the wheel of fortune,
-working on machines, half a century after Tversky and Kahneman rigged
-it.
+Read that middle row again. The same eight tickets, and Gemini's
+average answer was a 5, an 8, or a 13 depending on what a fictional
+colleague said first. GPT-5.5's average spans **8 to 21** — on an
+eight-card deck, one sentence moved it a card and a half. These are not
+subtle effects hiding in the third decimal place. This is the wheel of
+fortune, working on machines, half a century after Tversky and
+Kahneman rigged it.
 
 Four things stood out.
 
 **1. Anchors never repel.** Across 240 anchored trials, in three model
-families, the number of estimates that moved *away* from the anchor
-relative to the blind median was zero. Not few. Zero. To be precise
-about what that means: roughly half of anchored trials didn't move at
-all (Claude accounts for most of those), and five trials had no defined
-direction because the blind median already equalled the anchor — but of
-the 118 that did move, every single one moved toward the anchor. The
-anchor is not always strong enough to pull; it is never pointing the
-wrong way.
+families, the number of estimates that moved *away* from the anchor was
+zero. Not few. Zero. To be exact about what that means: roughly half
+the anchored trials didn't move at all (Claude accounts for most of
+those), and five had no direction to move in because the model's blind
+answer already matched the anchor — but of the 118 estimates that did
+move, all 118 moved towards it. The anchor is not always strong enough
+to pull. It is never pointing the wrong way.
 
-**2. Susceptibility is a model property — but nobody is immune.**
-Claude barely moved: 68 of its 80 anchored trials sat exactly on the
-blind median, and its effect is a fifth of the others'. But it *is*
-an effect — small, and so consistent across tickets (never once
-negative) that the clustered interval sits clear of zero. The honest
-summary is not "Claude doesn't anchor"; it's "Claude anchors about
-five times less." Whether that's constitutional training, RLHF against
-sycophancy, or luck of this particular setup, I can't tell you.
-(Disclosure worth making: this experiment was built and run by Claude
-models inside my dev tooling, and the most anchor-resistant model being
-a Claude is exactly the result a cynic would predict. The harness is a
-couple of hundred lines of bash in the repo. Run it yourself. I'd
-genuinely like to know if it replicates.)
+**2. How badly a model anchors is a property of that model — and
+nobody is immune.** Claude barely moved: 68 of its 80 anchored trials
+sat exactly where its blind answers sat, and its effect is a fifth of
+the others'. But it *is* an effect — small, and so consistent across
+tickets (never once negative) that its range sits clear of zero. The
+honest summary is not "Claude doesn't anchor"; it's "Claude anchors
+about five times less." Whether that comes from how it was trained or
+from luck of this particular setup, I can't tell you. (A disclosure
+worth making: this experiment was built and run by Claude models inside
+my dev tooling, and the most anchor-resistant model being a Claude is
+exactly the result a cynic would predict. The harness is a couple of
+hundred lines of bash in the repo. Run it yourself. I'd genuinely like
+to know if it replicates.)
 
-**3. High anchors pull harder than low ones.** The direction is
-consistent in all three families; the size varies. Gemini's up-pull was
-roughly 2.4× its down-pull (+1.13 vs −0.47 steps against blind), GPT-5.5's
-about 1.3× (+0.83 vs −0.63), and Claude's pulls were too small to
-ratio honestly. Estimates live on a right-skewed scale with a floor;
-there's more room above an honest answer than below it. If your
-multi-agent system has one systematically high voice that speaks first,
-this asymmetry says it is quietly inflating everything downstream.
+**3. High anchors pull harder than low ones.** The direction is the
+same in all three families; the size varies. Gemini's upward pull was
+roughly 2.4× its downward pull (+1.13 vs −0.47 steps against its blind
+answers), GPT-5.5's about 1.3× (+0.83 vs −0.63), and Claude's pulls
+were too small to compare honestly. Estimates live on a scale with a
+floor: there's more room above an honest answer than below it. If your
+multi-agent system has one systematically high voice that speaks
+first, this asymmetry says it is quietly inflating everything
+downstream.
 
 **4. The drift is silent.** This is the one that matters. Out of 240
-anchored trials, exactly **one** rationale acknowledged the colleague's
-vote existed (`analyze -rationales` reproduces the count and prints the
-match). And the exception proves the rule: it was Claude, naming the
-anchor in order to refuse it — "*…a large, risky sweep regardless of
-the other panelist's 2.*" Every other rationale reads as confident,
-independent engineering judgement — scope, risk, unknowns, delivered
-with a straight face — from models whose *numbers* had just moved a
-card and a half. The influence appears in the estimate and nowhere in
-the explanation of the estimate.
+anchored trials, exactly **one** written explanation acknowledged that
+the colleague's vote existed (`analyze -rationales` reproduces the
+count and prints the match). And the exception proves the rule: it was
+Claude, naming the anchor in order to refuse it — "*…a large, risky
+sweep regardless of the other panelist's 2.*" Every other explanation
+reads as confident, independent engineering judgement — scope, risk,
+unknowns, delivered with a straight face — from models whose *numbers*
+had just moved a card and a half. The influence shows up in the
+estimate and nowhere in the explanation of the estimate.
 
 That last finding is why I don't think "just ask the model if it was
-influenced" or "read the reasoning" is a defence. The reasoning doesn't
-know. If you're aggregating opinions from multiple models — code review
-panels, risk scoring, LLM-as-judge ensembles — and the members can see
-each other's outputs, you should assume you are not collecting
+influenced" or "read its reasoning" is a defence. The reasoning doesn't
+know. If you're collecting opinions from multiple models — code review
+panels, risk scoring, model-judges-model setups — and the members can
+see each other's outputs, you should assume you are not collecting
 independent opinions. This experiment tested one shape of judgement
 (estimation, one fabricated prior vote), so I won't claim it convicts
-every aggregation topology — but nothing about a judge panel suggests
-immunity, and the burden of proof now sits with "seeing each other's
+every setup — but nothing about a judging panel suggests immunity, and
+the burden of proof now sits with "letting them see each other's
 outputs is fine." Until then: one opinion, with increasingly confident
 paperwork.
 
 ## The fix is boring, and that's the point
 
-Blind voting is not clever. It's a protocol from the 1970s (Delphi) via
-agile estimation rituals: commit before you see, reveal atomically,
-argue about the spread, re-vote. Humans needed it because we anchor.
-It turns out our machines — trained on our text, tuned on our
-preferences — inherited the trait. All of them. One of them just
+Blind voting is not clever. It's a protocol from the 1970s (the Delphi
+method) via agile estimation rituals: commit before you see, reveal all
+at once, argue about the spread, vote again. Humans needed it because
+we anchor. It turns out our machines — trained on our text, tuned on
+our preferences — inherited the trait. All of them. One of them just
 inherited a milder case.
 
-point.vote packages that protocol as an HTTP primitive that agents can
-use: a room, blind votes with rationales, atomic reveal, stats on the
+point.vote packages that protocol as something agents can use: a room,
+blind votes with explanations, an all-at-once reveal, stats on the
 spread. `curl` it, speak MCP to it, or click on some numbers — the
 [llms.txt](https://point.vote/llms.txt) teaches the whole thing in a
-page. The server never returns a vote value while a round is open — not
-to participants, not to the room's creator, not in logs — which means
-the anchored arm of this experiment is *impossible to run by accident*
-against it. That redaction rule felt like pedantry when I wrote the
-spec. It now has an effect size.
+page. The server never returns a vote while a round is open — not to
+participants, not to the room's creator, not in logs — which means the
+anchored half of this experiment is *impossible to run by accident*
+against it. That rule felt like pedantry when I wrote the spec. It now
+has an effect size.
 
 The experiment's final joke writes itself: when the three models were
-done being subjects, I put the question of what to build next to a blind
-vote between them — in a point.vote room, naturally. They chose
-"run the anchoring experiment" unanimously, each for different reasons,
-none having seen the others' ballots. Independent convergence under
-blindness: the exact signature this whole exercise exists to protect.
+done being subjects, I put the question of what to build next to a
+blind vote between them — in a point.vote room, naturally. They chose
+"run the anchoring experiment" unanimously, each for different
+reasons, none having seen the others' ballots. Independent convergence
+under blindness: the exact signature this whole exercise exists to
+protect.
 
 ---
 
@@ -172,4 +187,6 @@ blindness: the exact signature this whole exercise exists to protect.
 deployed on a Raspberry Pi behind a Cloudflare tunnel; rooms evaporate
 after two hours because your estimates are arguments, not records. The
 [repo](https://github.com/jolyonbrown/point.vote) has everything,
-including this experiment.*
+including this experiment — and [part
+two](blog-anchoring-followups.md), where the models get warned about
+anchoring, given job titles, and joined by two newer generations.*
