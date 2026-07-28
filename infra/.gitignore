@@ -1,0 +1,8 @@
+# State and variable values stay local: state embeds the AWS account id
+# and distribution internals; tfvars carries contact details. Nothing in
+# committed .tf files identifies the account.
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+crash.log
