@@ -27,6 +27,11 @@ func (s *Server) mountStatic(mux *http.ServeMux) {
 		{"GET /llms.txt", "llms.txt", "text/plain; charset=utf-8", false},
 		{"GET /openapi.yaml", "openapi.yaml", "application/yaml; charset=utf-8", false},
 		{"GET /skill", "skill.md", "text/markdown; charset=utf-8", false},
+		// Web-filter classifiers fetch these while deciding whether to
+		// block the site; 404s leave us in the "unknown" bucket.
+		{"GET /sitemap.xml", "sitemap.xml", "application/xml; charset=utf-8", false},
+		{"GET /favicon.svg", "favicon.svg", "image/svg+xml", true},
+		{"GET /favicon.ico", "favicon.svg", "image/svg+xml", true},
 	}
 	for _, rt := range routes {
 		body, err := web.Files.ReadFile(rt.file)
