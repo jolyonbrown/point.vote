@@ -1,5 +1,13 @@
 # infra — the RSA side-door
 
+> **Status: torn down (2026-07-28), kept as a recipe.** The side-door
+> proved the diagnosis in the field — an iboss-managed laptop that
+> blocked point.vote loaded the CloudFront URL without complaint — and
+> the permanent fix chosen was Cloudflare Advanced Certificate Manager
+> (an RSA certificate on point.vote itself), which needs none of this.
+> `terraform apply` resurrects the side-door in ~10 minutes if a future
+> proxy problem wants the same diagnostic.
+
 Some enterprise TLS-inspection stacks (observed in the wild: iboss)
 cannot complete a handshake against Cloudflare's ECDSA-only Universal
 SSL certificate and block point.vote as "insecure certificates". This
