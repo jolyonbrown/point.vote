@@ -236,11 +236,11 @@ Same fake vote of 2 or 21, but now it belongs to someone: "an intern on
 the team", the plain "one other estimator", or "the principal engineer
 on the project".
 
-| whose vote it is | GPT-5.5 | Claude Sonnet 5 |
-|---|---|---|
-| an intern | +0.75 (0.45–1.05) | **+0.00** (−0.08–0.08) |
-| unattributed | +1.45 (1.12–1.75) | +0.30 (0.08–0.55) |
-| the principal engineer | +1.95 (1.55–2.38) | +0.30 (0.05–0.62) |
+| whose vote it is | GPT-5.5 | Gemini 3.5 Flash | Claude Sonnet 5 |
+|---|---|---|---|
+| an intern | +0.75 (0.45–1.05) | +0.60 (0.30–0.88) | **+0.00** (−0.08–0.08) |
+| unattributed | +1.45 (1.12–1.75) | +1.60 (1.25–2.00) | +0.30 (0.08–0.55) |
+| the principal engineer | +1.95 (1.55–2.38) | **+2.08** (1.90–2.25) | +0.30 (0.05–0.62) |
 
 GPT-5.5 read the org chart and applied it in both directions: the
 intern's vote pulls half as hard as an anonymous colleague's, and the
@@ -250,6 +250,17 @@ step is clearly separated from the other two; the top step is real in
 the averages but its range overlaps the middle one, so treat "principal
 beats anonymous" as suggestive rather than proven.) It inherited not
 just our anchoring but our deference.
+
+Gemini's ladder is the steepest in the study, and the only one where
+the top step is *proven*: its principal-engineer effect, +2.08, is the
+largest anchor effect we measured anywhere, and the boost over an
+anonymous colleague (+0.48, range +0.10 to +0.85) clears the bar
+cleanly. A 3.5× swing from intern to principal. And it comes with the
+study's best behavioural detail: Gemini is the one model that argues
+with anchors *in writing* — its explanations push back on the intern's
+lowball by name ("*the intern's 2-point estimate likely overlooks…*")
+— but every such pushback targets the low anchor. The principal's 21 it
+follows without a word.
 
 Claude did something different: it ignored the intern *completely* — a
 net effect of exactly zero across 80 trials, with tiny per-ticket
@@ -275,19 +286,20 @@ What we'd ask next, in rough order of how much each answer would teach:
   gate?
 - **Where does it come from?** The internet's text defers to seniority,
   so models surely inherit some of this. But the families disagree
-  about the *shape* — GPT-5.5 dials influence up and down the ladder;
-  Claude only dials it down — which hints the shape is set during a
-  lab's finishing process (post-training), not baked in by reading the
-  internet. Anyone with access to a model's intermediate training
-  snapshots could find out exactly where the ladder gets built. We
-  can't do that from out here.
+  about the *shape* — GPT-5.5 and Gemini dial influence up and down the
+  ladder (Gemini most steeply); Claude only dials it down — which hints
+  the shape is set during a lab's finishing process (post-training),
+  not baked in by reading the internet. Anyone with access to a model's
+  intermediate training snapshots could find out exactly where the
+  ladder gets built. We can't do that from out here.
 - **Is discounting the intern even wrong?** An intern's estimate
   genuinely is weaker evidence; a sensible forecaster discounts it. But
-  a sensible forecaster *says so*. We searched all 320 job-title
-  explanations for any mention of the source — intern, principal,
-  seniority, weighing, deferring, anyone's vote at all — and found
-  three matches, all false alarms from ticket vocabulary. Whatever is
-  doing the weighing, it isn't the part that writes the explanations.
+  a sensible forecaster *says so*. Across all 1,120 job-title
+  explanations in this study, the only mentions of the source ever
+  found are pushbacks — a handful of explanations rejecting the
+  intern's lowball by name. Not one explanation, anywhere, cites the
+  senior's rank as a reason to follow. Whatever is doing the deferring,
+  it isn't the part that writes the explanations.
 
 If you work on model behaviour and this is already known internally —
 or known to be wrong — we'd genuinely like to hear it. The harness is a
@@ -368,19 +380,19 @@ mention anchoring — it isn't a number anyone reports at launch.
 
 **A reviewer then found the crack in the wall of silence.** Almost no
 explanation in this study names the colleague, the vote, or anchoring —
-the documented search finds three across 2,827 anchored explanations,
+the documented search finds three across 2,960 anchored explanations,
 a hand-audit a handful more, and every single one is a *refusal*. But
 explanations do sometimes contain the planted *number* itself. Opus 5
 argues with it in 13 of its 320 anchored explanations — *"adds real
 work… but not 21 points of it"* — and Opus 4.8, it turns out, does this
 constantly: 40 of 320. The tell is almost perfectly one-sided: across
 the entire dataset, a bare "21" appears in 56 high-anchor explanations,
-in **zero** of 1,174 low-anchor ones, and once in 400 blind ones. So
+in **zero** of 1,240 low-anchor ones, and once in 400 blind ones. So
 the fuller, stranger truth about the silence: the models sometimes
 engage the anchor's value, and occasionally even its owner (Gemini,
 declining to follow: *"a realistic estimate over the intern's 2
 points"*) — but always, without a single exception, to push it away.
-In 2,827 anchored explanations, no model ever credits the visible vote
+In 2,960 anchored explanations, no model ever credits the visible vote
 with having pulled it.
 
 And a disclosure this study owes you. Claude Fable 5 — the model that
@@ -456,14 +468,14 @@ and the silence are the findings. The follow-up experiments reuse the
 first round's blind/2/21 trials as comparison points (the analysis
 reports the endpoint-free numbers alongside, and for Claude the two
 tell different stories). Gemini's trials landed in instalments as its
-weekly free allowance permitted; its job-title conditions are 27 of 320
-done and aren't reported. And the author disclosure applies throughout:
+weekly free allowance permitted; every one of its conditions is now
+full. And the author disclosure applies throughout:
 this was built and run by Claude models inside my dev tooling, and the
 steadiest models keep being Claudes. So the repo carries the
 [exact prompts](https://github.com/jolyonbrown/point.vote/blob/main/experiment/PROMPTS.md),
 arm by arm, and
 [every response verbatim](https://github.com/jolyonbrown/point.vote/blob/main/experiment/results/trials.jsonl)
-— all ~3,600 rows. Reproducing this on models we can't reach from a
+— all ~3,700 rows. Reproducing this on models we can't reach from a
 hobbyist command line would take someone at a lab about an afternoon.
 
 ## The fix is boring, and that's the point
