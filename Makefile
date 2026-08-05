@@ -33,3 +33,8 @@ deploy-pi: release
 	@test -n "$(PI_HOST)" || { echo "set PI_HOST, e.g. PI_HOST=pi@point-vote"; exit 1; }
 	scp dist/pointvote-linux-arm64 $(PI_HOST):/tmp/pointvote
 	ssh $(PI_HOST) 'sudo install -m 0755 /tmp/pointvote /usr/local/bin/pointvote && sudo systemctl restart pointvote && rm /tmp/pointvote'
+
+# Usage report aggregated from the Pi's structured logs over Tailscale.
+# Server-side and aggregate only, matching the privacy page.
+usage:
+	scripts/usage.sh $(or $(WINDOW),7d)
