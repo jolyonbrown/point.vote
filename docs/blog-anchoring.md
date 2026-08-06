@@ -3,7 +3,7 @@
        "I told three AIs what my 'colleague' estimated. Two of them caved."
        "Your AI's estimate is one-third whatever it heard first"        -->
 
-# I warned the AI it was being anchored. It anchored anyway.
+# I built a planner poker app for agents and humans and noticed something weird
 
 In 1974, the psychologists Tversky and Kahneman spun a rigged wheel of
 fortune in front of people, then asked an unrelated question: how many
