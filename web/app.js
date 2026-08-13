@@ -99,6 +99,7 @@
     let reconnectTimer = null;
     let sseGen = 0; // bumps on every SSE render; guards stale fetch races
     let wasJoined = false; // seen ourselves in state at least once
+    let lastHeard = Date.now(); // any SSE traffic, including pings
 
     $("#room-id").textContent = roomId;
     $("#copy-link").addEventListener("click", (e) => copyText(location.href, e.target));
@@ -543,6 +544,7 @@
     function connect() {
       es = new EventSource(base + "/events");
       const onEvent = (e) => {
+        lastHeard = Date.now();
         sseGen++;
         state = JSON.parse(e.data);
         if (me()) {
@@ -559,34 +561,69 @@
       for (const name of ["state", "joined", "left", "voted", "revealed", "round_started", "settled"]) {
         es.addEventListener(name, onEvent);
       }
-      es.addEventListener("reaction", (e) => floatReaction(JSON.parse(e.data)));
+      es.addEventListener("reaction", (e) => {
+        lastHeard = Date.now();
+        floatReaction(JSON.parse(e.data));
+      });
+      es.addEventListener("ping", () => { lastHeard = Date.now(); });
       es.onopen = () => {
+        lastHeard = Date.now();
         backoff = 1000;
         setLive(true);
       };
-      es.onerror = () => {
-        es.close();
-        setLive(false);
-        if (reconnectTimer) return; // one pending reconnect, ever
-        const delay = backoff * (0.5 + Math.random());
-        backoff = Math.min(backoff * 2, 30000);
-        reconnectTimer = setTimeout(async () => {
-          reconnectTimer = null;
-          try {
-            await api("GET", base);
-          } catch (err) {
-            if (err.status === 404) {
-              // The room evaporated. Stop knocking.
-              $("#room-main").hidden = true;
-              $("#room-missing").hidden = false;
-              return;
-            }
-            // Transient failure: reconnect anyway and let backoff grow.
-          }
-          connect();
-        }, delay);
-      };
+      es.onerror = () => scheduleReconnect();
     }
+
+    function scheduleReconnect() {
+      if (es) es.close();
+      setLive(false);
+      if (reconnectTimer) return; // one pending reconnect, ever
+      const delay = backoff * (0.5 + Math.random());
+      backoff = Math.min(backoff * 2, 30000);
+      reconnectTimer = setTimeout(async () => {
+        reconnectTimer = null;
+        try {
+          // The probe doubles as a refresh: even if the stream never
+          // comes back (some proxies buffer SSE forever), the room
+          // degrades to polling instead of freezing.
+          const gen = sseGen;
+          const st = await api("GET", base);
+          if (gen === sseGen) {
+            state = st;
+            render();
+          }
+        } catch (err) {
+          if (err.status === 404) {
+            // The room evaporated. Stop knocking.
+            $("#room-main").hidden = true;
+            $("#room-missing").hidden = false;
+            return;
+          }
+          // Transient failure: reconnect anyway and let backoff grow.
+        }
+        connect();
+      }, delay);
+    }
+
+    // Zombie-stream watchdog: a stream that delivers neither events nor
+    // pings for two-and-a-bit heartbeats is dead even if it never
+    // errored (TLS-inspecting proxies hold streams open while buffering
+    // them; laptops wake from sleep with sockets that look alive).
+    setInterval(() => {
+      if (es && Date.now() - lastHeard > 60000) scheduleReconnect();
+    }, 10000);
+
+    // Waking or coming back online: don't wait for the watchdog.
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden && Date.now() - lastHeard > 30000) {
+        backoff = 1000; // wake is not a server fault; retry eagerly
+        scheduleReconnect();
+      }
+    });
+    window.addEventListener("online", () => {
+      backoff = 1000;
+      scheduleReconnect();
+    });
 
     /* --- boot --- */
 

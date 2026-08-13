@@ -499,7 +499,7 @@ func TestSSEHeartbeat(t *testing.T) {
 	go func() {
 		sc := bufio.NewScanner(resp.Body)
 		for sc.Scan() {
-			if strings.HasPrefix(sc.Text(), ":") {
+			if strings.HasPrefix(sc.Text(), "event: ping") {
 				found <- true
 				return
 			}
@@ -508,7 +508,7 @@ func TestSSEHeartbeat(t *testing.T) {
 	select {
 	case <-found:
 	case <-deadline:
-		t.Fatal("no heartbeat comment within 3s at 50ms interval")
+		t.Fatal("no ping event within 3s at 50ms heartbeat interval")
 	}
 }
 
