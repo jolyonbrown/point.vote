@@ -50,7 +50,12 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 		case <-r.Context().Done():
 			return
 		case <-hb.C:
-			io.WriteString(w, ": heartbeat\n\n")
+			// A named event, not an SSE comment: comments are invisible
+			// to browser JavaScript, so a client can't tell a quiet
+			// stream from a dead one. A visible ping lets the UI run a
+			// liveness watchdog and rebuild zombie connections (TLS-
+			// inspecting proxies buffer streams without erroring).
+			io.WriteString(w, "event: ping\ndata: {}\n\n")
 			fl.Flush()
 		case ev, open := <-ch:
 			if !open {
