@@ -517,6 +517,7 @@ func (r *Room) snapshotLocked() State {
 		parts = append(parts, ParticipantState{ID: p.id, Name: p.name, Kind: p.kind, HasVoted: voted})
 	}
 	st := State{
+		Revision:   r.eventSeq,
 		RoomID:     r.id,
 		Deck:       slices.Clone(r.deck),
 		AutoReveal: r.autoReveal,
@@ -546,10 +547,9 @@ func (r *Room) sortedParticipantsLocked() []*Participant {
 	return ps
 }
 
-// subBuffer sizes subscriber channels. Sends are non-blocking: a slow
-// consumer just misses a snapshot; the next event carries full state
-// again. Sized with headroom for reactions, which share the channel and
-// raise pressure without carrying state.
+// subBuffer sizes subscriber channels. On overflow, a state event replaces
+// queued events so even the final reveal reaches a slow consumer. Reactions
+// are transient and may be dropped.
 const subBuffer = 16
 
 // Subscribe registers for room events. The channel closes when the room
@@ -595,15 +595,31 @@ func (r *Room) broadcastLocked(name string) {
 	r.fanoutLocked(Event{Name: name, State: r.snapshotLocked()})
 }
 
-// fanoutLocked stamps the event ID and delivers to every subscriber,
-// dropping rather than blocking on the slow ones.
+// fanoutLocked stamps the event ID and delivers without blocking. All
+// producers and channel closes hold r.mu, so draining creates space that
+// only this producer can fill.
 func (r *Room) fanoutLocked(ev Event) {
 	r.eventSeq++
 	ev.ID = r.eventSeq
+	if ev.Reaction == nil {
+		ev.State.Revision = r.eventSeq
+	}
 	for ch := range r.subs {
 		select {
 		case ch <- ev:
 		default:
+			if ev.Reaction != nil {
+				continue
+			}
+		drain:
+			for {
+				select {
+				case <-ch:
+				default:
+					break drain
+				}
+			}
+			ch <- ev
 		}
 	}
 }

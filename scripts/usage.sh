@@ -45,7 +45,8 @@ printf '%s\n' "$APP" | jq -rs '
 2xx/3xx:              \(map(select(.status < 400)) | length)
 4xx:                  \(map(select(.status >= 400 and .status < 500)) | length)
 5xx:                  \(map(select(.status >= 500)) | length)
-slow (>250ms):        \(map(select(.duration_ms > 250)) | length)"'
+slow REST/pages (>250ms): \(map(select(.duration_ms > 250 and (.path | endswith("/events") or endswith("/result") or . == "/mcp" | not))) | length)
+streams/long polls/MCP:   \(map(select(.path | endswith("/events") or endswith("/result") or . == "/mcp")) | length)"'
 echo
 echo "## Top pages (2xx, excluding API/stream noise)"
 printf '%s\n' "$APP" | jq -r 'select(.msg=="request" and .status<400) | .path' \

@@ -38,8 +38,12 @@ components:
               type: string
     State:
       type: object
-      required: [room_id, deck, auto_reveal, round, results, history, settled]
+      required: [revision, room_id, deck, auto_reveal, round, results, history, settled]
       properties:
+        revision:
+          type: integer
+          minimum: 0
+          description: Monotonic room revision; ignore snapshots older than the last applied revision.
         room_id: { type: string, examples: [mint-otter-42] }
         deck:
           type: array

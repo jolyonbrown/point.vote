@@ -203,9 +203,8 @@ func (s *Service) WaitForReveal(ctx context.Context, roomID string, timeout time
 
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
-	// Subscriber channels drop events rather than block (slow-consumer
-	// rule), so a reveal could in principle be missed under a stampede;
-	// the recheck ticker bounds that wait to two seconds.
+	// Subscriber queues coalesce under pressure. Recheck state as well so
+	// the long-poll does not depend solely on event delivery.
 	recheck := time.NewTicker(2 * time.Second)
 	defer recheck.Stop()
 

@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -23,14 +24,9 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	}
 	defer cancel()
 
-	fl, ok := w.(http.Flusher)
-	if !ok {
-		writeError(w, fmt.Errorf("streaming unsupported"))
-		return
-	}
 	h := w.Header()
 	h.Set("Content-Type", "text/event-stream")
-	h.Set("Cache-Control", "no-cache")
+	h.Set("Cache-Control", "no-cache, no-transform")
 	w.WriteHeader(http.StatusOK)
 
 	// Initial full snapshot. This also handles Last-Event-ID naively: a
@@ -40,8 +36,10 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	writeSSE(w, "state", 0, st)
-	fl.Flush()
+	if err := sendSSE(w, "state", st.Revision, st); err != nil {
+		return
+	}
+	lastEventID := st.Revision
 
 	hb := time.NewTicker(s.Heartbeat)
 	defer hb.Stop()
@@ -55,33 +53,59 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 			// stream from a dead one. A visible ping lets the UI run a
 			// liveness watchdog and rebuild zombie connections (TLS-
 			// inspecting proxies buffer streams without erroring).
-			io.WriteString(w, "event: ping\ndata: {}\n\n")
-			fl.Flush()
+			if err := sendSSE(w, "ping", 0, struct{}{}); err != nil {
+				return
+			}
 		case ev, open := <-ch:
 			if !open {
 				return // room expired
 			}
-			if ev.Reaction != nil {
-				writeSSE(w, ev.Name, ev.ID, ev.Reaction)
-			} else {
-				writeSSE(w, ev.Name, ev.ID, ev.State)
+			// The initial snapshot may already include events queued between
+			// subscribing and reading state. Never send an older snapshot after it.
+			if ev.ID <= lastEventID {
+				continue
 			}
-			fl.Flush()
+			lastEventID = ev.ID
+			if ev.Reaction != nil {
+				err = sendSSE(w, ev.Name, ev.ID, ev.Reaction)
+			} else {
+				err = sendSSE(w, ev.Name, ev.ID, ev.State)
+			}
+			if err != nil {
+				return
+			}
 		}
 	}
 }
 
 // writeSSE emits one event. payload is the full room state for every event
 // except "reaction", whose payload is the transient Reaction itself.
-func writeSSE(w io.Writer, name string, id int, payload any) {
+func writeSSE(w io.Writer, name string, id int, payload any) error {
 	data, err := json.Marshal(payload)
 	if err != nil {
-		return
+		return err
 	}
 	if id > 0 {
-		fmt.Fprintf(w, "id: %d\n", id)
+		if _, err := fmt.Fprintf(w, "id: %d\n", id); err != nil {
+			return err
+		}
 	}
-	fmt.Fprintf(w, "event: %s\ndata: %s\n\n", name, data)
+	_, err = fmt.Fprintf(w, "event: %s\ndata: %s\n\n", name, data)
+	return err
+}
+
+// Bound each write, not the lifetime of the stream. A disconnected or
+// non-reading client must not retain a handler indefinitely.
+func sendSSE(w http.ResponseWriter, name string, id int, payload any) error {
+	controller := http.NewResponseController(w)
+	if err := controller.SetWriteDeadline(time.Now().Add(10 * time.Second)); err != nil && !errors.Is(err, http.ErrNotSupported) {
+		return err
+	}
+	defer controller.SetWriteDeadline(time.Time{}) // idle streams wait longer than the write deadline
+	if err := writeSSE(w, name, id, payload); err != nil {
+		return err
+	}
+	return controller.Flush()
 }
 
 // handleResult is the long-poll: it blocks until the current round is

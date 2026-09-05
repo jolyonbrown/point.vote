@@ -115,6 +115,7 @@ evaporate.
 ```
 make run     # serve on 127.0.0.1:8080
 make test    # go test -race ./...
+make test-web # deterministic client recovery tests (Node 22+)
 make e2e     # black-box curl-flow test against a live binary
 make demo    # the two-agent Delphi demo
 ```
@@ -123,3 +124,9 @@ One boring Go binary, stdlib + the MCP SDK, web UI embedded. `Dockerfile`
 for container targets; [deploy/](deploy/README.md) documents the production
 deployment — a Raspberry Pi 3B+ behind a Cloudflare Tunnel, because a
 planning-poker server does not need more computer than that.
+
+Browser regression checks exercise six clients, buffered live streams and
+delayed responses against a local server. See the
+[performance review](docs/performance-review.md#implementation-and-verification)
+for the changes and commands. Playwright is a test-only dependency installed
+outside the repository; the shipped app still has no JavaScript dependencies.
