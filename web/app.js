@@ -19,20 +19,7 @@
     toastTimer = setTimeout(() => el.classList.remove("show"), 2600);
   }
 
-  async function api(method, path, body, token) {
-    const opts = { method, headers: {} };
-    if (body !== undefined) opts.body = JSON.stringify(body);
-    if (token) opts.headers["Authorization"] = "Bearer " + token;
-    const res = await fetch(path, opts);
-    const data = res.status === 204 ? null : await res.json().catch(() => null);
-    if (!res.ok) {
-      const err = new Error(data?.error?.message || "HTTP " + res.status);
-      err.status = res.status;
-      err.code = data?.error?.code;
-      throw err;
-    }
-    return data;
-  }
+  const api = PointVote.request;
 
   function copyText(text, btn) {
     navigator.clipboard?.writeText(text).then(
@@ -94,12 +81,8 @@
     let pid = sessionStorage.getItem(key("pid"));
     let state = null;
     let deckDrawn = false;
-    let es = null;
-    let backoff = 1000;
-    let reconnectTimer = null;
-    let sseGen = 0; // bumps on every SSE render; guards stale fetch races
     let wasJoined = false; // seen ourselves in state at least once
-    let lastHeard = Date.now(); // any SSE traffic, including pings
+    let votePending = false;
 
     $("#room-id").textContent = roomId;
     $("#copy-link").addEventListener("click", (e) => copyText(location.href, e.target));
@@ -180,7 +163,7 @@
           ? "All votes in."
           : "Waiting on " + waiting + " of " + voters + ".";
       }
-      $("#status").textContent = text;
+      $("#status").textContent = voting && votePending ? "Submitting your vote..." : text;
     }
 
     // Poker cards suit short values; a deck of long decision strings reads
@@ -219,7 +202,7 @@
       }
       const myVote = sessionStorage.getItem(myVoteKey());
       for (const btn of wrap.children) {
-        btn.disabled = !voting || !joined || iAmObserver;
+        btn.disabled = votePending || !voting || !joined || iAmObserver;
         const selected = voting && btn.dataset.v === myVote;
         btn.classList.toggle("selected", selected);
         btn.setAttribute("aria-checked", String(selected));
@@ -434,23 +417,32 @@
     /* --- actions --- */
 
     async function castVote(value) {
+      if (votePending) return;
+      const voteKey = myVoteKey();
       const body = { value };
       const rationale = $("#rationale").value.trim();
       if (rationale) body.rationale = rationale;
+      votePending = true;
+      render();
       try {
         await api("POST", base + "/vote", body, token);
-        sessionStorage.setItem(myVoteKey(), value);
-        render(); // show selection now; SSE snapshot follows
+        sessionStorage.setItem(voteKey, value);
       } catch (err) {
         if (err.status === 409) toast("Round's already revealed. Start a new one.");
         else if (err.status === 401) forgetIdentity();
-        else toast("Vote refused: " + err.message);
+        else toast(err.name === "TimeoutError"
+          ? "Vote response timed out. Checking the room..."
+          : "Vote refused: " + err.message);
+      } finally {
+        votePending = false;
+        render();
+        void refreshAfterAction();
       }
     }
 
     $("#reveal").addEventListener("click", async () => {
       try {
-        await api("POST", base + "/reveal", undefined, token);
+        await mutate($("#reveal"), "/reveal");
       } catch (err) {
         if (err.status === 409) toast("Already revealed.");
         else if (err.status === 401) forgetIdentity();
@@ -460,7 +452,7 @@
 
     $("#settle").addEventListener("click", async () => {
       try {
-        await api("POST", base + "/settle", { value: $("#settle-value").value }, token);
+        await mutate($("#settle"), "/settle", { value: $("#settle-value").value });
       } catch (err) {
         if (err.status === 409) toast("Reveal the round first.");
         else if (err.status === 401) forgetIdentity();
@@ -473,7 +465,7 @@
       const subject = $("#next-subject").value.trim();
       if (subject) body.subject = subject;
       try {
-        await api("POST", base + "/rounds", body, token);
+        await mutate($("#next-round"), "/rounds", body);
         $("#next-subject").value = "";
         $("#rationale").value = "";
       } catch (err) {
@@ -516,15 +508,9 @@
         sessionStorage.setItem(key("pid"), pid);
         localStorage.setItem("pv:name", name);
         $("#join-dialog").close();
-        // The joined event will arrive via SSE, but fetch immediately for
-        // snappiness on slow connections — unless an SSE render beat us to
-        // it, in which case the fetch is the staler of the two.
-        const gen = sseGen;
-        const fetched = await api("GET", base);
-        if (gen === sseGen) {
-          state = fetched;
-          render();
-        }
+        await refreshAfterAction();
+        wasJoined = Boolean(me());
+        render(); // Identity may have arrived after the joined snapshot.
       } catch (err) {
         toast(err.status === 404
           ? "This room has expired. Rooms evaporate after two hours of quiet."
@@ -532,98 +518,49 @@
       }
     });
 
-    /* --- live updates: reconnect with jittered backoff --- */
+    /* --- live updates and periodic reconciliation --- */
 
-    function setLive(on) {
-      const el = $("#live");
-      el.classList.toggle("on", on);
-      el.classList.toggle("off", !on);
-      el.title = on ? "live" : "reconnecting…";
+    function applyState(next) {
+      if (state && next.revision <= state.revision) return;
+      state = next;
+      if (me()) wasJoined = true;
+      else if (token && wasJoined) forgetIdentity();
+      render();
     }
 
-    function connect() {
-      es = new EventSource(base + "/events");
-      const onEvent = (e) => {
-        lastHeard = Date.now();
-        sseGen++;
-        state = JSON.parse(e.data);
-        if (me()) {
-          wasJoined = true;
-        } else if (token && wasJoined) {
-          // We were in this room and now we're not (room recycled after
-          // expiry): the token is dead, rejoin honestly. The wasJoined
-          // guard stops a stale pre-join snapshot from wiping a fresh
-          // identity.
-          forgetIdentity();
-        }
-        render();
-      };
-      for (const name of ["state", "joined", "left", "voted", "revealed", "round_started", "settled"]) {
-        es.addEventListener(name, onEvent);
-      }
-      es.addEventListener("reaction", (e) => {
-        lastHeard = Date.now();
-        floatReaction(JSON.parse(e.data));
-      });
-      es.addEventListener("ping", () => { lastHeard = Date.now(); });
-      es.onopen = () => {
-        lastHeard = Date.now();
-        backoff = 1000;
-        setLive(true);
-      };
-      es.onerror = () => scheduleReconnect();
-    }
-
-    function scheduleReconnect() {
-      if (es) es.close();
-      setLive(false);
-      if (reconnectTimer) return; // one pending reconnect, ever
-      const delay = backoff * (0.5 + Math.random());
-      backoff = Math.min(backoff * 2, 30000);
-      reconnectTimer = setTimeout(async () => {
-        reconnectTimer = null;
-        try {
-          // The probe doubles as a refresh: even if the stream never
-          // comes back (some proxies buffer SSE forever), the room
-          // degrades to polling instead of freezing.
-          const gen = sseGen;
-          const st = await api("GET", base);
-          if (gen === sseGen) {
-            state = st;
-            render();
-          }
-        } catch (err) {
-          if (err.status === 404) {
-            // The room evaporated. Stop knocking.
-            $("#room-main").hidden = true;
-            $("#room-missing").hidden = false;
-            return;
-          }
-          // Transient failure: reconnect anyway and let backoff grow.
-        }
-        connect();
-      }, delay);
-    }
-
-    // Zombie-stream watchdog: a stream that delivers neither events nor
-    // pings for two-and-a-bit heartbeats is dead even if it never
-    // errored (TLS-inspecting proxies hold streams open while buffering
-    // them; laptops wake from sleep with sockets that look alive).
-    setInterval(() => {
-      if (es && Date.now() - lastHeard > 60000) scheduleReconnect();
-    }, 10000);
-
-    // Waking or coming back online: don't wait for the watchdog.
-    document.addEventListener("visibilitychange", () => {
-      if (!document.hidden && Date.now() - lastHeard > 30000) {
-        backoff = 1000; // wake is not a server fault; retry eagerly
-        scheduleReconnect();
-      }
+    const live = new PointVote.RoomConnection(base, {
+      onState: applyState,
+      onLive: (on) => {
+        const el = $("#live");
+        el.classList.toggle("on", on);
+        el.classList.toggle("off", !on);
+        el.title = on ? "live" : "reconnecting";
+      },
+      onMissing: () => {
+        $("#join-dialog").close();
+        $("#room-main").hidden = true;
+        $("#room-missing").hidden = false;
+      },
+      onReaction: floatReaction,
     });
-    window.addEventListener("online", () => {
-      backoff = 1000;
-      scheduleReconnect();
-    });
+
+    // A POST may finish while an older periodic GET is still in flight.
+    const refreshAfterAction = () => live.refresh(true).catch(() => {});
+
+    async function mutate(button, path, body) {
+      if (button.disabled) return;
+      button.disabled = true;
+      button.setAttribute("aria-busy", "true");
+      try {
+        applyState(await api("POST", base + path, body, token));
+      } catch (err) {
+        void refreshAfterAction();
+        throw err;
+      } finally {
+        button.disabled = false;
+        button.removeAttribute("aria-busy");
+      }
+    }
 
     /* --- boot --- */
 
@@ -640,7 +577,7 @@
       }
       $("#room-main").hidden = false;
       render();
-      connect();
+      live.start();
       if (!token) showJoin();
     })();
   }

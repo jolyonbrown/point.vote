@@ -7,6 +7,7 @@ import "time"
 
 // State is the full (redacted while voting) room state.
 type State struct {
+	Revision   int            `json:"revision"`
 	RoomID     string         `json:"room_id"`
 	Deck       []string       `json:"deck"`
 	AutoReveal bool           `json:"auto_reveal"`

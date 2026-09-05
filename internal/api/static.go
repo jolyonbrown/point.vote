@@ -23,6 +23,7 @@ func (s *Server) mountStatic(mux *http.ServeMux) {
 		{"GET /{$}", "index.html", "text/html; charset=utf-8", false},
 		{"GET /r/{id}", "room.html", "text/html; charset=utf-8", false},
 		{"GET /app.js", "app.js", "text/javascript; charset=utf-8", true},
+		{"GET /live.js", "live.js", "text/javascript; charset=utf-8", true},
 		{"GET /style.css", "style.css", "text/css; charset=utf-8", true},
 		{"GET /llms.txt", "llms.txt", "text/plain; charset=utf-8", false},
 		{"GET /openapi.yaml", "openapi.yaml", "application/yaml; charset=utf-8", false},

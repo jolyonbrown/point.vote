@@ -73,7 +73,11 @@ func (r *statusRecorder) WriteHeader(status int) {
 }
 
 func (r *statusRecorder) Flush() {
-	if f, ok := r.ResponseWriter.(http.Flusher); ok {
-		f.Flush()
-	}
+	_ = r.FlushError()
 }
+
+func (r *statusRecorder) FlushError() error {
+	return http.NewResponseController(r.ResponseWriter).Flush()
+}
+
+func (r *statusRecorder) Unwrap() http.ResponseWriter { return r.ResponseWriter }

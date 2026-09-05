@@ -18,7 +18,8 @@ func TestStaticRoutes(t *testing.T) {
 		{"/", "text/html; charset=utf-8", "Planning poker for humans"},
 		{"/r/mint-otter-42", "text/html; charset=utf-8", "Pull up a chair"},
 		{"/r/anything-goes-00", "text/html; charset=utf-8", "point"},
-		{"/app.js", "text/javascript; charset=utf-8", "EventSource"},
+		{"/app.js", "text/javascript; charset=utf-8", "PointVote"},
+		{"/live.js", "text/javascript; charset=utf-8", "EventSource"},
 		{"/style.css", "text/css; charset=utf-8", "--accent"},
 		{"/llms.txt", "text/plain; charset=utf-8", "blindness is\nthe point"},
 		{"/openapi.yaml", "application/yaml; charset=utf-8", "openapi: 3.1.0"},
@@ -67,7 +68,7 @@ func TestStaticRoutes(t *testing.T) {
 		// deploy invalidates browser caches (Cloudflare rewrites our
 		// max-age for static extensions; HTML is never cached, so the
 		// changed URL is what actually reaches browsers).
-		for _, want := range []string{"/app.js?v=vTEST", "/style.css?v=vTEST"} {
+		for _, want := range []string{"/app.js?v=vTEST", "/live.js?v=vTEST", "/style.css?v=vTEST"} {
 			if !strings.Contains(string(body), want) {
 				t.Fatalf("%s: missing cache-busted asset ref %q", path, want)
 			}

@@ -1,12 +1,15 @@
 GO ?= go
 
-.PHONY: run test lint e2e demo docker release deploy-pi
+.PHONY: run test test-web lint e2e demo docker release deploy-pi
 
 run:
 	$(GO) run ./cmd/pointvote
 
 test:
 	$(GO) test -race ./...
+
+test-web:
+	node --test web/live.test.cjs
 
 lint:
 	$(GO) vet ./...
